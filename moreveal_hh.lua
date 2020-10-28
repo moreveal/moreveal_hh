@@ -13,16 +13,16 @@ function getBodyPartCoordinates(id, handle)
     return vec[0], vec[1], vec[2]
 end
 
-local pfd -- ID жертвы
-local acc_id -- номера аккаунта агента
-local c_ids = {} -- челы из /contractas
-local cstream -- состояние чекера контрактов в зоне стрима
-local nametag -- состояние неймтега
-local onlypp = true -- выключать ли скрипт, если он запущен не на PP
-local autoupdate = true -- загружать ли обновления, если они имеются
+local pfd -- ID Р¶РµСЂС‚РІС‹
+local acc_id -- РЅРѕРјРµСЂР° Р°РєРєР°СѓРЅС‚Р° Р°РіРµРЅС‚Р°
+local c_ids = {} -- С‡РµР»С‹ РёР· /contractas
+local cstream -- СЃРѕСЃС‚РѕСЏРЅРёРµ С‡РµРєРµСЂР° РєРѕРЅС‚СЂР°РєС‚РѕРІ РІ Р·РѕРЅРµ СЃС‚СЂРёРјР°
+local nametag -- СЃРѕСЃС‚РѕСЏРЅРёРµ РЅРµР№РјС‚РµРіР°
+local onlypp = true -- РІС‹РєР»СЋС‡Р°С‚СЊ Р»Рё СЃРєСЂРёРїС‚, РµСЃР»Рё РѕРЅ Р·Р°РїСѓС‰РµРЅ РЅРµ РЅР° PP
+local autoupdate = true -- Р·Р°РіСЂСѓР¶Р°С‚СЊ Р»Рё РѕР±РЅРѕРІР»РµРЅРёСЏ, РµСЃР»Рё РѕРЅРё РёРјРµСЋС‚СЃСЏ
 
-local script_version = 2 --[[ используется для автообновления, во избежание проблем 
-с получением новых обновлений, рекомендуется не изменять, в случае их появления измените значение на "1" ]]
+local script_version = 2 --[[ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ Р°РІС‚РѕРѕР±РЅРѕРІР»РµРЅРёСЏ, РІРѕ РёР·Р±РµР¶Р°РЅРёРµ РїСЂРѕР±Р»РµРј 
+СЃ РїРѕР»СѓС‡РµРЅРёРµРј РЅРѕРІС‹С… РѕР±РЅРѕРІР»РµРЅРёР№, СЂРµРєРѕРјРµРЅРґСѓРµС‚СЃСЏ РЅРµ РёР·РјРµРЅСЏС‚СЊ, РІ СЃР»СѓС‡Р°Рµ РёС… РїРѕСЏРІР»РµРЅРёСЏ РёР·РјРµРЅРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ РЅР° "1" ]]
 
 local openStats = false
 local openContractas = false
@@ -31,7 +31,7 @@ local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/
 
 local time = os.clock()
 
-font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для рендера текста
+font = renderCreateFont('Bahnschrift Bold', 10) -- РїРѕРґРєР»СЋС‡РµРЅРёРµ С€СЂРёС„С‚Р° РґР»СЏ СЂРµРЅРґРµСЂР° С‚РµРєСЃС‚Р°
 
 function main()
     if not isSampLoaded() or not isSampfuncsLoaded() then return end
@@ -42,7 +42,7 @@ function main()
         local requests_path = getWorkingDirectory()..'/lib/requests.lua'
         downloadUrlToFile(requests_url, requests_path, function(id, status) 
             if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                sampAddChatMessage("{cccccc}[ Hitman Helper ]: Библиотека 'requests' установлена автоматически.", -1)
+                sampAddChatMessage("{cccccc}[ Hitman Helper ]: Р‘РёР±Р»РёРѕС‚РµРєР° 'requests' СѓСЃС‚Р°РЅРѕРІР»РµРЅР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.", -1)
             end
         end)
     end
@@ -51,7 +51,7 @@ function main()
 
     local ip, port = sampGetCurrentServerAddress()
     if onlypp and ip ~= '176.32.37.62' and port ~= '7777' then
-        sampAddChatMessage('{cccccc}[ Hitman Helper ]: Это не Pears Project, не думаю, что я буду полезен тебе тут..', -1)
+        sampAddChatMessage('{cccccc}[ Hitman Helper ]: Р­С‚Рѕ РЅРµ Pears Project, РЅРµ РґСѓРјР°СЋ, С‡С‚Рѕ СЏ Р±СѓРґСѓ РїРѕР»РµР·РµРЅ С‚РµР±Рµ С‚СѓС‚..', -1)
         thisScript():unload()
     end
 
@@ -72,33 +72,33 @@ function main()
     sampRegisterChatCommand('pfd', function(arg)
         if pfd == nil then
             if arg:find('%D') or #arg == 0 then
-                sampAddChatMessage('{cccccc}[ Мысли ]: Правильное использование поиска: [/pfd ID]', -1)
+                sampAddChatMessage('{cccccc}[ РњС‹СЃР»Рё ]: РџСЂР°РІРёР»СЊРЅРѕРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РїРѕРёСЃРєР°: [/pfd ID]', -1)
             else
                 if sampIsPlayerConnected(tonumber(arg)) then
                     pfd = tonumber(arg)
-                    sampAddChatMessage('{cccccc}[ Мысли ]: Преследование за '..sampGetPlayerNickname(pfd)..' ['..pfd..'] запущено.', -1)
+                    sampAddChatMessage('{cccccc}[ РњС‹СЃР»Рё ]: РџСЂРµСЃР»РµРґРѕРІР°РЅРёРµ Р·Р° '..sampGetPlayerNickname(pfd)..' ['..pfd..'] Р·Р°РїСѓС‰РµРЅРѕ.', -1)
                 else
-                    sampAddChatMessage('{cccccc}[ Мысли ]: Кажется, этого игрока нет в сети', -1)
+                    sampAddChatMessage('{cccccc}[ РњС‹СЃР»Рё ]: РљР°Р¶РµС‚СЃСЏ, СЌС‚РѕРіРѕ РёРіСЂРѕРєР° РЅРµС‚ РІ СЃРµС‚Рё', -1)
                 end
             end
         else
             pfd = nil
-            sampAddChatMessage('{cccccc}[ Мысли ]: Преследование прекращено.', -1)
+            sampAddChatMessage('{cccccc}[ РњС‹СЃР»Рё ]: РџСЂРµСЃР»РµРґРѕРІР°РЅРёРµ РїСЂРµРєСЂР°С‰РµРЅРѕ.', -1)
         end
     end)
 
     sampRegisterChatCommand('zask', function(id)
         if not id:find('%D') and #id ~= 0 then
-            sampSendChat('Я, Агент №'..acc_id..', готов приступить к выполнению контракта №'..id)
+            sampSendChat('РЇ, РђРіРµРЅС‚ в„–'..acc_id..', РіРѕС‚РѕРІ РїСЂРёСЃС‚СѓРїРёС‚СЊ Рє РІС‹РїРѕР»РЅРµРЅРёСЋ РєРѕРЅС‚СЂР°РєС‚Р° в„–'..id)
         else
-            sampAddChatMessage('{cccccc}[ Мысли ]: Чтобы запросить контракт, я должен ввести: [/zask ID]')
+            sampAddChatMessage('{cccccc}[ РњС‹СЃР»Рё ]: Р§С‚РѕР±С‹ Р·Р°РїСЂРѕСЃРёС‚СЊ РєРѕРЅС‚СЂР°РєС‚, СЏ РґРѕР»Р¶РµРЅ РІРІРµСЃС‚Рё: [/zask ID]')
         end
     end)
 
 	sampRegisterChatCommand('cstream', function()
         cstream = not cstream
         getContractas()
-		sampAddChatMessage('{cccccc}[ Мысли ]: Я '..(cstream and 'включил' or 'выключил')..' чекер контрактов в зоне стрима.', -1)
+		sampAddChatMessage('{cccccc}[ РњС‹СЃР»Рё ]: РЇ '..(cstream and 'РІРєР»СЋС‡РёР»' or 'РІС‹РєР»СЋС‡РёР»')..' С‡РµРєРµСЂ РєРѕРЅС‚СЂР°РєС‚РѕРІ РІ Р·РѕРЅРµ СЃС‚СЂРёРјР°.', -1)
     end)
     
     while true do
@@ -109,8 +109,8 @@ function main()
                 local script_url = 'https://www.dropbox.com/s/5ub84kcrtoq8mhz/moreveal_hh.lua?dl=1'
                 downloadUrlToFile(script_url, thisScript().path, function(id, status)
                     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                        sampAddChatMessage('{cccccc}[ Hitman Helper ]: Обновление загружено. Новая версия: '..text_version, -1)
-                        sampAddChatMessage('{cccccc}[ Hitman Helper ]: Начинаю перезапуск скрипта. Ожидай, это не займет много времени.', -1)
+                        sampAddChatMessage('{cccccc}[ Hitman Helper ]: РћР±РЅРѕРІР»РµРЅРёРµ Р·Р°РіСЂСѓР¶РµРЅРѕ. РќРѕРІР°СЏ РІРµСЂСЃРёСЏ: '..text_version, -1)
+                        sampAddChatMessage('{cccccc}[ Hitman Helper ]: РќР°С‡РёРЅР°СЋ РїРµСЂРµР·Р°РїСѓСЃРє СЃРєСЂРёРїС‚Р°. РћР¶РёРґР°Р№, СЌС‚Рѕ РЅРµ Р·Р°Р№РјРµС‚ РјРЅРѕРіРѕ РІСЂРµРјРµРЅРё.', -1)
                         thisScript():reload()
                     end 
                 end)
@@ -118,7 +118,7 @@ function main()
             end
         end)
 
-        if not isKeyDown(0x77) then -- если кнопка F8 не нажата
+        if not isKeyDown(0x77) then -- РµСЃР»Рё РєРЅРѕРїРєР° F8 РЅРµ РЅР°Р¶Р°С‚Р°
             local sw, sh = getScreenResolution()
             
             if pfd ~= nil then
@@ -131,7 +131,7 @@ function main()
                 end)
 
                 if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(pfd)) then
-                    renderFontDrawText(font, '{ff0000}ПОИСК: {ffffff}'..sampGetPlayerNickname(pfd)..' [ '..pfd..' ]', sw * 0.75, sh * 0.91, 0xFFFFFFFF, 1)
+                    renderFontDrawText(font, '{ff0000}РџРћРРЎРљ: {ffffff}'..sampGetPlayerNickname(pfd)..' [ '..pfd..' ]', sw * 0.75, sh * 0.91, 0xFFFFFFFF, 1)
                     local result, handle = sampGetCharHandleBySampPlayerId(pfd)
     
                     if result and doesCharExist(handle) and isCharOnScreen(handle) then
@@ -151,9 +151,9 @@ function main()
 
             if getInvisiblity(id) then
                 if pfd ~= nil then
-                    renderFontDrawText(font, '{0088ff}НЕВИДИМОСТЬ', sw * 0.75, sh * 0.88, 0xFFFFFFFF)
+                    renderFontDrawText(font, '{0088ff}РќР•Р’РР”РРњРћРЎРўР¬', sw * 0.75, sh * 0.88, 0xFFFFFFFF)
                 else
-                    renderFontDrawText(font, '{0088ff}НЕВИДИМОСТЬ', sw * 0.75, sh * 0.91, 0xFFFFFFFF)
+                    renderFontDrawText(font, '{0088ff}РќР•Р’РР”РРњРћРЎРўР¬', sw * 0.75, sh * 0.91, 0xFFFFFFFF)
                 end
             end
 
@@ -179,8 +179,8 @@ end
 function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
     if openStats and dialogid == 1500 then
         for line in text:gmatch('[^\r\n]+') do
-            if line:find('Аккаунт №') then
-                acc_id = line:match('Аккаунт №%s?%{......%}?%s?(%d+)')
+            if line:find('РђРєРєР°СѓРЅС‚ в„–') then
+                acc_id = line:match('РђРєРєР°СѓРЅС‚ в„–%s?%{......%}?%s?(%d+)')
                 break
             end
         end
@@ -199,16 +199,16 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
 end
 
 function sampev.onServerMessage(color, text)
-    if text:find('Я открыл своё лицо%s?%{......%}%s?%[ Никнейм включён %]') then
+    if text:find('РЇ РѕС‚РєСЂС‹Р» СЃРІРѕС‘ Р»РёС†Рѕ%s?%{......%}%s?%[ РќРёРєРЅРµР№Рј РІРєР»СЋС‡С‘РЅ %]') then
         nametag = false
     end
-    if text:find('Я закрыл своё лицо%s?%{......%}%s?%[ Никнейм отключён %]') then
+    if text:find('РЇ Р·Р°РєСЂС‹Р» СЃРІРѕС‘ Р»РёС†Рѕ%s?%{......%}%s?%[ РќРёРєРЅРµР№Рј РѕС‚РєР»СЋС‡С‘РЅ %]') then
         nametag = true
     end
-    if text:find('%[ Мысли %]%: Я не могу видеть список потенциальных жертв') then
+    if text:find('%[ РњС‹СЃР»Рё %]%: РЇ РЅРµ РјРѕРіСѓ РІРёРґРµС‚СЊ СЃРїРёСЃРѕРє РїРѕС‚РµРЅС†РёР°Р»СЊРЅС‹С… Р¶РµСЂС‚РІ') then
         return false
     end
-    if text:find('%[ Мысли %]%: Я не могу искать человека') then
+    if text:find('%[ РњС‹СЃР»Рё %]%: РЇ РЅРµ РјРѕРіСѓ РёСЃРєР°С‚СЊ С‡РµР»РѕРІРµРєР°') then
         return false
     end
 end
@@ -217,7 +217,7 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
     if cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
-                sampAddChatMessage('{cccccc}[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] в зоне стрима. Стоимость - {800000}'..v..'${ffffff}.', -1)
+                sampAddChatMessage('{cccccc}[ РњС‹СЃР»Рё ]: РљРѕРЅС‚СЂР°РєС‚ {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] РІ Р·РѕРЅРµ СЃС‚СЂРёРјР°. РЎС‚РѕРёРјРѕСЃС‚СЊ - {800000}'..v..'${ffffff}.', -1)
             end
         end
     end
@@ -236,14 +236,8 @@ function getContractas()
     openContractas = true
     if cstream then
         lua_thread.create(function ()
-            wait(10000) -- чекер новых контрактов раз в 10 секунд
+            wait(10000) -- С‡РµРєРµСЂ РЅРѕРІС‹С… РєРѕРЅС‚СЂР°РєС‚РѕРІ СЂР°Р· РІ 10 СЃРµРєСѓРЅРґ
             getContractas()
         end)
-    end
-end    
-
-function onScriptTerminate(luascript, quit)
-    if luascript == thisScript() then
-        if doesFileExist(update_path) then os.remove(update_path) end
     end
 end
