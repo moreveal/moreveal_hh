@@ -233,6 +233,24 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
     end
 end
 
+function sampev.onPlaySound(id)
+    if id == 40405 then 
+        if cstream then
+            return false
+        end
+    end
+end
+
+function sampev.onPlayerStreamOut(playerid)
+    if cstream then
+        for k, v in pairs(c_ids) do
+            if k == playerid then
+                sampAddChatMessage('{cccccc}[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] покинул зону стрима.', -1)
+            end
+        end
+    end
+end
+
 function getInvisiblity(id)
     if sampGetPlayerColor(id) == 16777215 then
         return true 
