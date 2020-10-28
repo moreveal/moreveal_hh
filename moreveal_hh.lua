@@ -18,7 +18,7 @@ local acc_id -- номера аккаунта агента
 local c_ids = {} -- челы из /contractas
 local cstream -- состояние чекера контрактов в зоне стрима
 local nametag -- состояние неймтега
-local onlypp = false -- выключать ли скрипт, если он запущен не на PP
+local onlypp = true -- выключать ли скрипт, если он запущен не на PP
 local autoupdate = true -- загружать ли обновления, если они имеются
 
 local script_version = 3 --[[ используется для автообновления, во избежание проблем 
