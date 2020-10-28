@@ -125,6 +125,7 @@ function main()
             if cstream then
                 lua_thread.create(function ()
                     if os.clock() - time_stream >= 10 then
+                        c_ids = {}
                         sampSendChat('/contractas')
                         openContractas = true
                         time_stream = os.clock()
@@ -199,9 +200,8 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
     end
     if openContractas and dialogid == 8999 then
         for line in text:gmatch("[^\r\n]+") do
-            for w, s in line:gmatch('%[(%d+)%].+%{......%}(%d+)%$') do
-                table.insert(c_ids, w, s)
-            end
+            local id, sum = line:match('%[(%d+)%].+(%d+)$')
+            table.insert(array, id, sum)
         end
 		openContractas = false
         return false
