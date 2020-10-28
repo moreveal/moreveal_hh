@@ -29,7 +29,8 @@ local openContractas = false
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/update.cfg'
 
-local time = os.clock()
+local time_find = os.clock()
+local time_stream = os.clock()
 
 font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для рендера текста
 
@@ -50,7 +51,7 @@ function main()
     requests = require 'requests'
 
     local ip, port = sampGetCurrentServerAddress()
-    if onlypp and ip ~= '176.32.37.62' and port ~= '7777' then
+    if onlypp and ip ~= '176.32.37.62' and port ~= 7777 then
         sampAddChatMessage('{cccccc}[ Hitman Helper ]: Это не Pears Project, не думаю, что я буду полезен тебе тут..', -1)
         thisScript():unload()
     end
@@ -97,7 +98,6 @@ function main()
 
 	sampRegisterChatCommand('cstream', function()
         cstream = not cstream
-        getContractas()
 		sampAddChatMessage('{cccccc}[ Мысли ]: Я '..(cstream and 'включил' or 'выключил')..' чекер контрактов в зоне стрима.', -1)
     end)
     
@@ -121,12 +121,22 @@ function main()
         if not isKeyDown(0x77) then -- если кнопка F8 не нажата
             local sw, sh = getScreenResolution()
             
-            if pfd ~= nil then
 
+            if cstream then
                 lua_thread.create(function ()
-                    if os.clock() - time >= 3 then
+                    if os.clock() - time_stream >= 10 then
+                        sampSendChat('/contractas')
+                        openContractas = true
+                        time_stream = os.clock()
+                    end
+                end)
+            end
+
+            if pfd ~= nil then
+                lua_thread.create(function ()
+                    if os.clock() - time_find >= 3 then
                         sampSendChat('/find '..pfd)
-                        time = os.clock()
+                        time_find = os.clock()
                     end
                 end)
 
@@ -228,16 +238,5 @@ function getInvisiblity(id)
         return true 
     else 
         return false
-    end
-end
-
-function getContractas()
-    sampSendChat('/contractas')
-    openContractas = true
-    if cstream then
-        lua_thread.create(function ()
-            wait(10000) -- чекер новых контрактов раз в 10 секунд
-            getContractas()
-        end)
     end
 end
