@@ -18,7 +18,7 @@ local acc_id -- номера аккаунта агента
 local c_ids = {} -- челы из /contractas
 local cstream -- состояние чекера контрактов в зоне стрима
 local nametag -- состояние неймтега
-local onlypp = true -- выключать ли скрипт, если он запущен не на PP
+local onlypp = false -- выключать ли скрипт, если он запущен не на PP
 local autoupdate = true -- загружать ли обновления, если они имеются
 
 local script_version = 3 --[[ используется для автообновления, во избежание проблем 
@@ -51,7 +51,7 @@ function main()
     requests = require 'requests'
 
     local ip, port = sampGetCurrentServerAddress()
-    if onlypp and ip ~= '176.32.37.62' and port ~= 7777 then
+    if onlypp and ip ~= '176.32.37.62' and port ~= '7777' then
         sampAddChatMessage('{cccccc}[ Hitman Helper ]: Это не Pears Project, не думаю, что я буду полезен тебе тут..', -1)
         thisScript():unload()
     end
@@ -180,7 +180,7 @@ function main()
     end
 end
 
-function sampev.onGiveTakeDamage(playerid, damage, weapon, bodypart)
+function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     if playerid == pfd and sampGetPlayerHealth(playerid) - damage <= 0 then
         pfd = nil
     end
