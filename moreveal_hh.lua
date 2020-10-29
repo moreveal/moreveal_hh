@@ -253,10 +253,9 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
         openStats = false
         return false
     end
-    if openContractas then
+    if openContractas and dialogid == 8999 then
         for line in text:gmatch("[^\r\n]+") do
-            local id, sum = line:match('%[(%d+)%].+(%d+)$')
-            sampAddChatMessage(id..', '..sum, -1)
+            local id, sum = line:match('%[(%d+)%].+%{99ff66}(%d+)%$')
             table.insert(c_ids, id, sum)
         end
 		openContractas = false
