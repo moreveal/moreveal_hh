@@ -264,7 +264,17 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
             openContractas = false
             return false
         end
-        local text = text:gsub('%{ff9000%}', '%{'..string.format('%06X', bit.band(sampGetPlayerColor(line:match('.+%[(%d+)%]')),  0xFFFFFF))..'%}')
+        local count = 0
+        local text
+        for line in text:gmatch('[^\r\n]+') do
+            count = count + 1
+            line = line:gsub('%{ff9000%}', '%{'..string.format('%06X', bit.band(sampGetPlayerColor(line:match('.+%[(%d+)%]')),  0xFFFFFF))..'%}')
+            if count > 0 then
+                text = text..line
+            else
+                text = line
+            end
+        end
         return {dialogid, style, title, b1, b2, text}
     end
 end
