@@ -256,13 +256,15 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
     if dialogid == 8999 then
         if openContractas then
             for line in text:gmatch("[^\r\n]+") do
-                local id, sum = line:match('%[(%d+)%].+%{99ff66}(%d+)%$')
-                table.insert(c_ids, id, sum)
+                if line:find('%$') then
+                    local id, sum = line:match('%[(%d+)%].+%{99ff66}(%d+)%$')
+                    table.insert(c_ids, id, sum)
+                end
             end
             openContractas = false
             return false
         end
-        text = text:gsub('{ff9000}', '{'..string.format('%06X', bit.band(sampGetPlayerColor(line:match('.+%[(%d+)%]')),  0xFFFFFF))..'}')
+        local text = text:gsub('%{ff9000%}', '%{'..string.format('%06X', bit.band(sampGetPlayerColor(line:match('.+%[(%d+)%]')),  0xFFFFFF))..'%}')
         return {dialogid, style, title, b1, b2, text}
     end
 end
