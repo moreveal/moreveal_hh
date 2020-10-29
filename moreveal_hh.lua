@@ -253,13 +253,17 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
         openStats = false
         return false
     end
-    if openContractas and dialogid == 8999 then
-        for line in text:gmatch("[^\r\n]+") do
-            local id, sum = line:match('%[(%d+)%].+%{99ff66}(%d+)%$')
-            table.insert(c_ids, id, sum)
+    if dialogid == 8999 then
+        if openContractas then
+            for line in text:gmatch("[^\r\n]+") do
+                local id, sum = line:match('%[(%d+)%].+%{99ff66}(%d+)%$')
+                table.insert(c_ids, id, sum)
+            end
+            openContractas = false
+            return false
         end
-		openContractas = false
-        return false
+        text = text:gsub('{ff9000}', '{'..string.format('%06X', bit.band(sampGetPlayerColor(line:match('.+%[(%d+)%]')),  0xFFFFFF))..'}')
+        return {dialogid, style, title, b1, b2, text}
     end
 end
 
