@@ -5,6 +5,7 @@ require 'lib.moonloader'
 local ffi = require "ffi"
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
 local dlstatus = require('moonloader').download_status
+local thispp = false
 
 function getBodyPartCoordinates(id, handle)
     local pedptr = getCharPointer(handle)
@@ -21,7 +22,9 @@ local nametag -- состояние неймтега
 local onlypp = false -- выключать ли скрипт, если он запущен не на PP
 local autoupdate = true -- загружать ли обновления, если они имеются
 
-local script_version = 4 --[[ используется для автообновления, во избежание проблем 
+local D_SETCOLOR = 5111 -- диалог для выбора цвета
+
+local script_version = 5 --[[ используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять, в случае их появления измените значение на "1" ]]
 
 local openStats = false
@@ -43,7 +46,7 @@ function main()
         local requests_path = getWorkingDirectory()..'/lib/requests.lua'
         downloadUrlToFile(requests_url, requests_path, function(id, status) 
             if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                sampAddChatMessage("{cccccc}[ Hitman Helper ]: Библиотека 'requests' установлена автоматически.", -1)
+                sampAddChatMessage("[ Hitman Helper ]: Библиотека 'requests' установлена автоматически.", -1)
             end
         end)
     end
@@ -51,9 +54,13 @@ function main()
     requests = require 'requests'
 
     local ip, port = sampGetCurrentServerAddress()
-    if onlypp and ip ~= '176.32.37.62' and port ~= '7777' then
-        sampAddChatMessage('{cccccc}[ Hitman Helper ]: Это не Pears Project, не думаю, что я буду полезен тебе тут..', -1)
-        thisScript():unload()
+    if ip ~= '176.32.37.62' and port ~= '7777' then
+        if onlypp then
+            sampAddChatMessage('[ Hitman Helper ]: Это не Pears Project, не думаю, что я буду полезен тебе тут..', 0xCCCCCC)
+            thisScript():unload()
+        end
+    else
+        thispp = true
     end
 
     repeat wait(0) until sampIsLocalPlayerSpawned() and isCharOnScreen(PLAYER_PED)
@@ -67,50 +74,61 @@ function main()
     end
 
     id = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
-    sampSendChat('/stats')
-    openStats = true
+    if thispp then
+        sampSendChat('/stats')
+        openStats = true
+    end
 
     sampRegisterChatCommand('pfd', function(arg)
         if pfd == nil then
             if arg:find('%D') or #arg == 0 then
-                sampAddChatMessage('{cccccc}[ Мысли ]: Правильное использование поиска: [/pfd ID]', -1)
+                sampAddChatMessage('[ Мысли ]: Правильное использование поиска: [/pfd ID]', 0xCCCCCC)
             else
                 if sampIsPlayerConnected(tonumber(arg)) then
                     pfd = tonumber(arg)
-                    sampAddChatMessage('{cccccc}[ Мысли ]: Преследование за '..sampGetPlayerNickname(pfd)..' ['..pfd..'] запущено.', -1)
+                    sampAddChatMessage('[ Мысли ]: Преследование за '..sampGetPlayerNickname(pfd)..' ['..pfd..'] запущено.', 0xCCCCCC)
                 else
-                    sampAddChatMessage('{cccccc}[ Мысли ]: Кажется, этого игрока нет в сети', -1)
+                    sampAddChatMessage('[ Мысли ]: Кажется, этого игрока нет в сети', 0xCCCCCC)
                 end
             end
         else
             pfd = nil
-            sampAddChatMessage('{cccccc}[ Мысли ]: Преследование прекращено.', -1)
+            sampAddChatMessage('[ Мысли ]: Преследование прекращено.', 0xCCCCCC)
         end
     end)
 
     sampRegisterChatCommand('zask', function(id)
         if not id:find('%D') and #id ~= 0 then
-            sampSendChat('Я, Агент №'..acc_id..', готов приступить к выполнению контракта №'..id)
+            if acc_id ~= nil then
+                sampSendChat('Я, Агент №'..acc_id..', готов приступить к выполнению контракта №'..id)
+            end
         else
-            sampAddChatMessage('{cccccc}[ Мысли ]: Чтобы запросить контракт, я должен ввести: [/zask ID]')
+            sampAddChatMessage('[ Мысли ]: Чтобы запросить контракт, я должен ввести: [/zask ID]', 0xCCCCCC)
         end
     end)
 
 	sampRegisterChatCommand('cstream', function()
         cstream = not cstream
-		sampAddChatMessage('{cccccc}[ Мысли ]: Я '..(cstream and 'включил' or 'выключил')..' чекер контрактов в зоне стрима.', -1)
+		sampAddChatMessage('[ Мысли ]: Я '..(cstream and 'включил' or 'выключил')..' чекер контрактов в зоне стрима.', 0xCCCCCC)
     end)
     
     while true do
         wait(0)
+
+        local result, button, listitem, input = sampHasDialogRespond(D_SETCOLOR)
+        if result then
+            if button == 1 then
+                sampSendChat('/setcolor '..listitem + 1)
+            end
+        end
 
         lua_thread.create(function ()
             if update then
                 local script_url = 'https://www.dropbox.com/s/5ub84kcrtoq8mhz/moreveal_hh.lua?dl=1'
                 downloadUrlToFile(script_url, thisScript().path, function(id, status)
                     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                        sampAddChatMessage('{cccccc}[ Hitman Helper ]: Обновление загружено. Новая версия: '..text_version, -1)
-                        sampAddChatMessage('{cccccc}[ Hitman Helper ]: Начинаю перезапуск скрипта. Ожидай, это не займет много времени.', -1)
+                        sampAddChatMessage('[ Hitman Helper ]: Обновление загружено. Новая версия: '..text_version, 0xCCCCCC)
+                        sampAddChatMessage('[ Hitman Helper ]: Начинаю перезапуск скрипта. Ожидай, это не займет много времени.', 0xCCCCCC)
                         thisScript():reload()
                     end 
                 end)
@@ -136,7 +154,9 @@ function main()
             if pfd ~= nil then
                 lua_thread.create(function ()
                     if os.clock() - time_find >= 3 then
-                        sampSendChat('/find '..pfd)
+                        if thispp then 
+                            sampSendChat('/find '..pfd)
+                        end
                         time_find = os.clock()
                     end
                 end)
@@ -187,6 +207,41 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     end
 end
 
+function sampev.onSendCommand(cmd)
+    if cmd:find('/setcolor%s*$') then
+        local dialog_text = [[
+{0066FF}LSPD [1]
+{6666FF}FBI [2]
+{F4A460}Национальная гвардия [3]
+{FF6666}Министерство здравоохранения [4]
+{CCCC00}La Cosa Nostra [5]
+{990000}Yakuza Mafia [6]
+{FFFFFF}Правительство [7]
+{CCCCCC}Hitman's Agency [8]
+{FFCC66}CNN [9]
+{003366}Triada Magia [10]
+{122FAA}SFPD [11]
+{333333}Russian Mafia [12]
+{00CC00}Grove Street [13]
+{9900CC}Ballas [14]
+{FFCC33}Vagos [15]
+{00FFFF}Aztecas [16]
+{499092}Rifa Gang [17]
+{663300}Arabian Mafia [18]
+{CDC9A4}Street Racers [19]
+{90696A}Bikers [20]
+{4B6894}LVPD [21]
+{191970}SWAT [22]
+{333300}Призывник [23]
+{00CC99}ВВС [24]
+{339966}ВМФ [25]
+]]
+        sampShowDialog(D_SETCOLOR, 'Выбор цвета', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+
+        return false
+    end
+end
+
 function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
     if openStats and dialogid == 1500 then
         for line in text:gmatch('[^\r\n]+') do
@@ -198,10 +253,11 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
         openStats = false
         return false
     end
-    if openContractas and dialogid == 8999 then
+    if openContractas then
         for line in text:gmatch("[^\r\n]+") do
             local id, sum = line:match('%[(%d+)%].+(%d+)$')
-            table.insert(array, id, sum)
+            sampAddChatMessage(id..', '..sum, -1)
+            table.insert(c_ids, id, sum)
         end
 		openContractas = false
         return false
@@ -227,7 +283,7 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
     if cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
-                sampAddChatMessage('{cccccc}[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] в зоне стрима. Стоимость - {800000}'..v..'${ffffff}.', -1)
+                sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] в зоне стрима. Стоимость - {800000}'..v..'${ffffff}.', 0xCCCCCC)
             end
         end
     end
@@ -245,7 +301,7 @@ function sampev.onPlayerStreamOut(playerid)
     if cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
-                sampAddChatMessage('{cccccc}[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] покинул зону стрима.', -1)
+                sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] покинул зону стрима.', 0xCCCCCC)
             end
         end
     end
