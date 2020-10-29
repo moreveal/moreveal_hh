@@ -270,9 +270,9 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
             count = count + 1
             line = line:gsub('%{ff9000%}', '%{'..string.format('%06X', bit.band(sampGetPlayerColor(line:match('.+%[(%d+)%]')),  0xFFFFFF))..'%}')
             if count > 0 then
-                text = text..line
+                text = text..line..'\n'
             else
-                text = line
+                text = line..'\n'
             end
         end
         return {dialogid, style, title, b1, b2, text}
