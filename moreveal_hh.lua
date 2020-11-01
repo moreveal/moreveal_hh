@@ -37,14 +37,14 @@ local D_SETCOLOR = 5111 -- диалог для выбора цвета
 local D_SETTING = 5112 -- диалог для настройки скрипта
 local D_INVALID = 5113 -- диалог, использующийся для вывода информации
 
-local script_version = 7 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 8 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '0.5' -- версия для вывода в окне настроек, не изменять
+local text_version = '0.6' -- версия для вывода в окне настроек, не изменять
 local last_news = [[
 {0088ff}Были добавлены/изменены следующие функции:
     {ff0000}*{ffffff} Меню с возможностью настройки каждой функции отдельно
     {ff0000}*{ffffff} Чекер отстрела [ /otstrel_list ]
-    {ff0000}*{ffffff} Список нововведений, который ты сейчас читаешь
+    {ff0000}*{ffffff} Окно "О скрипте", которое ты сейчас читаешь
     {ff0000}*{ffffff} По умолчанию поиск жертвы не ведется на сторонних серверах
     {ff0000}*{ffffff} Возможность включения OOC-чата по умолчанию
     {ff0000}*{ffffff} Возможность авто-скриншота при выполнении контракта
@@ -190,9 +190,7 @@ function main()
         end
     end)
 
-    sampRegisterChatCommand('sethh', function()
-        scriptMenu()
-    end)
+    sampRegisterChatCommand('sethh', scriptMenu)
 
     sampRegisterChatCommand('otstrel_list', function()
         local dialog_text
@@ -232,7 +230,7 @@ function main()
             if button == 1 then
                 local openMenu = true
                 if listitem == 0 then
-                    sampShowDialog(D_INVALID, 'Последние нововведения || Версия: '..text_version, last_news, '*', nil, DIALOG_STYLE_MSGBOX)
+                    sampShowDialog(D_INVALID, 'О скрипте || Версия: '..text_version, last_news, '*', nil, DIALOG_STYLE_MSGBOX)
                     openMenu = false
                 end
                 if listitem == 1 then
@@ -503,7 +501,7 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Просмотр последних нововведений\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(autoscreen and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Да' or '{ff0000}Нет')..'\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}О скрипте\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(autoscreen and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Да' or '{ff0000}Нет')..'\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function screenct()
