@@ -226,7 +226,7 @@ function main()
                 if listitem == 1 then
                     autoscreen = not autoscreen
                     if autoscreen == false then mainIni.config.autoscreen = 0 else mainIni.config.autoscreen = 1 end
-                    sampAddChatMessage('[ Мысли ]: Авто-скриншот при выполненном контракте '..(autoscreen and 'включен' or 'выключен'), 0xCCCCCC)
+                    sampAddChatMessage('[ Мысли ]: Авто-скриншот выполненного контракта '..(autoscreen and 'включен' or 'выключен'), 0xCCCCCC)
                 end
                 if listitem == 2 then
                     cstream = not cstream
@@ -281,9 +281,16 @@ function main()
         end)
 
         if c_pfd_hp then
-            if sampGetPlayerHealth(pfd) <= 0 then
-                pfd = nil
-            end
+            lua_thread.create(function ()
+                wait(100)
+                if sampGetPlayerHealth(pfd) <= 0 then
+                    if autoscreen then
+                        goKeyPressed(0x77)
+                        sampAddChatMessage('[ Мысли ]: Скриншот выполненного контракта сохранен.', 0xCCCCCC)
+                    end
+                    pfd = nil
+                end
+            end)
             c_pfd_hp = false
         end
 
@@ -388,12 +395,6 @@ function sampev.onServerMessage(color, text)
     if text:find('%[ Мысли %]%: Я не могу искать человека') then
         return false
     end
-    if text:find('%[Агенство%]%: %{......%}Деньги перечислены на ваш банковский счёт.') then
-        if autoscreen then
-            goKeyPressed(0x77)
-            sampAddChatMessage('[ Мысли ]: Скриншот выполненного контракта сохранен.', 0xCCCCCC)
-        end
-    end
 end
 
 function sampev.onPlayerStreamIn(playerid, team, model, position)
@@ -470,7 +471,7 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Просмотр последних нововведений\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот при выполненном контракте\t'..(autoscreen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Yes' or '{ff0000}No'), 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Просмотр последних нововведений\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(autoscreen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Yes' or '{ff0000}No'), 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function scriptBody()
