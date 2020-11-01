@@ -106,15 +106,20 @@ function main()
     config_path = getWorkingDirectory()..'/config/hh_config.ini'
     mainIni = inicfg.load(nil, config_path)
 
-    if mainIni.config.cstream == 0 then cstream = false else cstream = true end
-    if mainIni.config.autoscreen == 0 then autoscreen = false else autoscreen = true end
-    if mainIni.config.metka == 0 then metka = false else metka = true end
-    if mainIni.config.without_screen == 0 then without_screen = false else without_screen = true end
-    if mainIni.config.otstrel == 0 then otstrel = false else otstrel = true end
-    if mainIni.config.ooc_only == 0 then ooc_only = false else ooc_only = true end
-    if mainIni.config.search_other_servers == 0 then search_other_servers = false else search_other_servers = true end
-    if mainIni.config.onlypp == 0 then onlypp = false else onlypp = true end
-    if mainIni.config.autoupdate == 0 then autoupdate = false else autoupdate = true end
+    if not doesFileExist(config_path) then
+        local f = io.open(config_path, 'w+')
+        f:close()
+    else
+        if mainIni.config.cstream == 0 then cstream = false else cstream = true end
+        if mainIni.config.autoscreen == 0 then autoscreen = false else autoscreen = true end
+        if mainIni.config.metka == 0 then metka = false else metka = true end
+        if mainIni.config.without_screen == 0 then without_screen = false else without_screen = true end
+        if mainIni.config.otstrel == 0 then otstrel = false else otstrel = true end
+        if mainIni.config.ooc_only == 0 then ooc_only = false else ooc_only = true end
+        if mainIni.config.search_other_servers == 0 then search_other_servers = false else search_other_servers = true end
+        if mainIni.config.onlypp == 0 then onlypp = false else onlypp = true end
+        if mainIni.config.autoupdate == 0 then autoupdate = false else autoupdate = true end
+    end
 
     if otstrel then
         local otstrel_path = getWorkingDirectory()..'/config/otstrel.txt'
