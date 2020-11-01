@@ -1,6 +1,7 @@
 sampev = require 'lib.samp.events'
 require 'lib.sampfuncs'
 require 'lib.moonloader'
+local inicfg = require 'inicfg'
 
 local ffi = require "ffi"
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
@@ -16,26 +17,65 @@ end
 
 local pfd -- ID жертвы
 local acc_id -- номера аккаунта агента
-local c_ids = {} -- челы из /contractas
+local c_ids = {} -- люди из /contractas
+
+local otstrel_list = {} -- люди, состоящие в списке отстрела
+local otstrel_online = {} -- люди, состоящие в списке отстрела онлайн
+
 local cstream -- состояние чекера контрактов в зоне стрима
 local nametag -- состояние неймтега
-local onlypp = false -- выключать ли скрипт, если он запущен не на PP
-local autoupdate = true -- загружать ли обновления, если они имеются
+local autoscreen -- делать ли скриншот после выполненного контракта
+local metka -- ставить ли метку на голове у игрока, занесенного в PFD
+local without_screen -- скрывать ли скрипт при скриншоте
+local otstrel -- состояние чекера отстрела
+local ooc_only -- состояние OOC-чата по умолчанию
+local search_other_servers -- вести ли поиск за игроком, занесенного в PFD, на сторонних серверах
+local onlypp -- выключать ли скрипт, если он запущен не на PP
+local autoupdate -- загружать ли обновления, если они имеются
 
 local D_SETCOLOR = 5111 -- диалог для выбора цвета
+local D_SETTING = 5112 -- диалог для настройки скрипта
+local D_INVALID = 5113 -- диалог, использующийся для вывода информации
 
-local script_version = 5 --[[ используется для автообновления, во избежание проблем 
-с получением новых обновлений, рекомендуется не изменять, в случае их появления измените значение на "1" ]]
+local script_version = 7 --[[ Используется для автообновления, во избежание проблем 
+с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
+local text_version = '0.5' -- версия для вывода в окне настроек, не изменять
+local last_news = [[
+{0088ff}Были добавлены/изменены следующие функции:
+    {ff0000}*{ffffff} Меню с возможностью настройки каждой функции отдельно
+    {ff0000}*{ffffff} Чекер отстрела [ /otstrel_list ]
+    {ff0000}*{ffffff} Список нововведений, который ты сейчас читаешь
+    {ff0000}*{ffffff} По умолчанию поиск жертвы не ведется на сторонних серверах
+    {ff0000}*{ffffff} Возможность включения OOC-чата по умолчанию
+    {ff0000}*{ffffff} Возможность авто-скриншота при выполнении контракта
+    {ff0000}*{ffffff} Возможность выключения скрипта при скриншоте
+    {ff0000}*{ffffff} Команда [/cstream] была убрана, ввиду её переноса 
+    в основное меню
+    {ff0000}*{ffffff} Поиск игрока, занесенного в PFD, совершается раз в 4 секунды
+
+{cccccc}Помимо этого было исправлено несколько недочетов
+{cccccc}Все настройки сохраняются после перезапуска
+
+{cccccc}Список доступных команд:{ffffff}
+    /sethh - основное меню скрипта с необходимыми настройками
+    /pfd [id] - запустить постоянный поиск за человеком
+    /zask [id] - запросить контракт в [/f]
+    /otstrel_list - просмотреть людей из списка отстрела {008000}Online{ffffff}
+    /setcolor - быстрый выбор цвета организации
+{ff0000}----------------------------------------------------------------------------------------------------------------------
+]]
 
 local openStats = false
 local openContractas = false
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/update.cfg'
 
-local time_find = os.clock()
-local time_stream = os.clock()
+local time_find = os.clock() -- таймер /find
+local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
+local time_otstrel = os.clock() -- таймер чекера людей из списка отстрела
 
-font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для рендера текста
+font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для рендера большей части надписей
+font_hud = renderCreateFont('Bahnschrift Bold', 14) -- подключение шрифта для рендера остального текста
 
 function main()
     if not isSampLoaded() or not isSampfuncsLoaded() then return end
@@ -63,13 +103,39 @@ function main()
         thispp = true
     end
 
+    config_path = getWorkingDirectory()..'/config/hh_config.ini'
+    mainIni = inicfg.load(nil, config_path)
+
+    if mainIni.config.cstream == 0 then cstream = false else cstream = true end
+    if mainIni.config.autoscreen == 0 then autoscreen = false else autoscreen = true end
+    if mainIni.config.metka == 0 then metka = false else metka = true end
+    if mainIni.config.without_screen == 0 then without_screen = false else without_screen = true end
+    if mainIni.config.otstrel == 0 then otstrel = false else otstrel = true end
+    if mainIni.config.ooc_only == 0 then ooc_only = false else ooc_only = true end
+    if mainIni.config.search_other_servers == 0 then search_other_servers = false else search_other_servers = true end
+    if mainIni.config.onlypp == 0 then onlypp = false else onlypp = true end
+    if mainIni.config.autoupdate == 0 then autoupdate = false else autoupdate = true end
+
+    if otstrel then
+        local otstrel_path = getWorkingDirectory()..'/config/otstrel.txt'
+        local f = io.open(otstrel_path, 'r+')
+        if f == nil then f = io.open(otstrel_path, 'w') end
+        for line in f:lines() do
+            table.insert(otstrel_list, line)
+        end
+        f:close()
+    end
+
     repeat wait(0) until sampIsLocalPlayerSpawned() and isCharOnScreen(PLAYER_PED)
 
-    if autoupdate then
-        local response = requests.get(update_url)
-        version, text_version = response.text:match('(%d+) | (.+)')
-        if tonumber(version) > script_version then
+    local response = requests.get(update_url)
+    new_version, text_new_version = response.text:match('(%d+) | (.+)')
+    if tonumber(new_version) > script_version then
+        if autoupdate then
             update = true
+        else
+            sampAddChatMessage('[ Hitman Helper ]: Найдено новое обновление. Версия: '..text_new_version, 0xCCCCCC)
+            sampAddChatMessage('[ Hitman Helper ]: Рекомендуется включить автообновление в скрипте.', 0xCCCCCC)
         end
     end
 
@@ -77,6 +143,16 @@ function main()
     if thispp then
         sampSendChat('/stats')
         openStats = true
+    end
+
+    if otstrel then
+        for k, v in pairs(otstrel_list) do
+            local id = sampGetPlayerIdByNickname(v)
+            if id ~= nil then
+                table.insert(otstrel_online, id)
+            end
+        end
+        sampAddChatMessage('[ Отстрел ]: В сети обнаружено '..table.maxn(otstrel_online)..' человек из списка.', 0xCCCCCC)
     end
 
     sampRegisterChatCommand('pfd', function(arg)
@@ -97,6 +173,23 @@ function main()
         end
     end)
 
+    sampRegisterChatCommand('sethh', function()
+        scriptMenu()
+    end)
+
+    sampRegisterChatCommand('otstrel_list', function()
+        local dialog_text
+        for k, v in pairs(otstrel_online) do
+            local color = string.format('%06X', bit.band(sampGetPlayerColor(v),  0xFFFFFF))
+            if dialog_text == nil then
+                dialog_text = 'Никнейм\tID\n'..'{'..color..'}'..sampGetPlayerNickname(v)..'\t[ '..v..' ]\n'
+            else
+                dialog_text = dialog_text..'{'..color..'}'..sampGetPlayerNickname(v)..'\t[ '..v..' ]\n'
+            end
+        end
+        sampShowDialog(D_INVALID, 'Список людей из списка отстрела {008000}Online', dialog_text, '*', nil, DIALOG_STYLE_TABLIST_HEADERS)
+    end)
+
     sampRegisterChatCommand('zask', function(id)
         if not id:find('%D') and #id ~= 0 then
             if acc_id ~= nil then
@@ -105,11 +198,6 @@ function main()
         else
             sampAddChatMessage('[ Мысли ]: Чтобы запросить контракт, я должен ввести: [/zask ID]', 0xCCCCCC)
         end
-    end)
-
-	sampRegisterChatCommand('cstream', function()
-        cstream = not cstream
-		sampAddChatMessage('[ Мысли ]: Я '..(cstream and 'включил' or 'выключил')..' чекер контрактов в зоне стрима.', 0xCCCCCC)
     end)
     
     while true do
@@ -122,12 +210,63 @@ function main()
             end
         end
 
+        local result, button, listitem, input = sampHasDialogRespond(D_SETTING)
+        if result then
+            if button == 1 then
+                local openMenu = true
+                if listitem == 0 then
+                    sampShowDialog(D_INVALID, 'Последние нововведения || Версия: '..text_version, last_news, '*', nil, DIALOG_STYLE_MSGBOX)
+                    openMenu = false
+                end
+                if listitem == 1 then
+                    autoscreen = not autoscreen
+                    if autoscreen == false then mainIni.config.autoscreen = 0 else mainIni.config.autoscreen = 1 end
+                    sampAddChatMessage('[ Мысли ]: Авто-скриншот при выполненном контракте '..(autoscreen and 'включен' or 'выключен'), 0xCCCCCC)
+                end
+                if listitem == 2 then
+                    cstream = not cstream
+                    if cstream == false then mainIni.config.cstream = 0 else mainIni.config.cstream = 1 end
+                    sampAddChatMessage('[ Мысли ]: Я '..(cstream and 'включил' or 'выключил')..' чекер контрактов в зоне стрима.', 0xCCCCCC)
+                end
+                if listitem == 3 then
+                    metka = not metka
+                    if metka == false then mainIni.config.metka = 0 else mainIni.config.metka = 1 end
+                    sampAddChatMessage('[ Мысли ]: Я '..(metka and 'включил' or 'выключил')..' метку на голове игрока, занесенного в [ /pfd ]', 0xCCCCCC)
+                end
+                if listitem == 4 then
+                    without_screen = not without_screen
+                    if without_screen == false then mainIni.config.without_screen = 0 else mainIni.config.without_screen = 1 end
+                    sampAddChatMessage('[ Мысли ]: Теперь скрипт '..(without_screen and 'не будет' or 'будет')..' скрываться при скриншоте', 0xCCCCCC)
+                end
+                if listitem == 5 then
+                    otstrel = not otstrel
+                    if otstrel == false then mainIni.config.otstrel = 0 else mainIni.config.otstrel = 1 end
+                    if not doesFileExist(getWorkingDirectory()..'/config/otstrel.txt') then
+                        local f = io.open(getWorkingDirectory()..'/config/otstrel.txt', 'w')
+                        f:close()
+                    end
+                    sampAddChatMessage('[ Мысли ]: Я '..(otstrel and 'включил' or 'выключил')..' чекер людей из списка отстрела', 0xCCCCCC)
+                end
+                if listitem == 6 then
+                    ooc_only = not ooc_only
+                    if ooc_only == false then mainIni.config.ooc_only = 0 else mainIni.config.ooc_only = 1 end
+                    sampAddChatMessage('[ Мысли ]: Я '..(ooc_only and 'включил' or 'выключил').." OOC-чат по умолчанию "..(ooc_only and "[ Чтобы писать в IC чат, поставьте '>' перед сообщением ]" or ''), 0xCCCCCC)
+                end
+                if listitem == 7 then
+                    search_other_servers = not search_other_servers
+                    if search_other_servers == false then mainIni.config.search_other_servers = 0 else mainIni.config.search_other_servers = 1 end
+                    sampAddChatMessage('[ Мысли ]: Теперь поиск '..(search_other_servers and 'будет' or 'не будет')..' работать на сторонних серверах', 0xCCCCCC)
+                end
+                if openMenu then scriptMenu() end
+            end
+        end
+
         lua_thread.create(function ()
             if update then
                 local script_url = 'https://www.dropbox.com/s/5ub84kcrtoq8mhz/moreveal_hh.lua?dl=1'
                 downloadUrlToFile(script_url, thisScript().path, function(id, status)
                     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                        sampAddChatMessage('[ Hitman Helper ]: Обновление загружено. Новая версия: '..text_version, 0xCCCCCC)
+                        sampAddChatMessage('[ Hitman Helper ]: Обновление загружено. Новая версия: '..text_new_version, 0xCCCCCC)
                         sampAddChatMessage('[ Hitman Helper ]: Начинаю перезапуск скрипта. Ожидай, это не займет много времени.', 0xCCCCCC)
                         thisScript():reload()
                     end 
@@ -136,74 +275,26 @@ function main()
             end
         end)
 
+        if c_pfd_hp then
+            if sampGetPlayerHealth(pfd) <= 0 then
+                pfd = nil
+            end
+            c_pfd_hp = false
+        end
+
         if not isKeyDown(0x77) then -- если кнопка F8 не нажата
-            local sw, sh = getScreenResolution()
-            
-
-            if cstream then
-                lua_thread.create(function ()
-                    if os.clock() - time_stream >= 10 then
-                        c_ids = {}
-                        sampSendChat('/contractas')
-                        openContractas = true
-                        time_stream = os.clock()
-                    end
-                end)
-            end
-
-            if pfd ~= nil then
-                lua_thread.create(function ()
-                    if os.clock() - time_find >= 3 then
-                        if thispp then 
-                            sampSendChat('/find '..pfd)
-                        end
-                        time_find = os.clock()
-                    end
-                end)
-
-                if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(pfd)) then
-                    renderFontDrawText(font, '{ff0000}ПОИСК: {ffffff}'..sampGetPlayerNickname(pfd)..' [ '..pfd..' ]', sw * 0.75, sh * 0.91, 0xFFFFFFFF, 1)
-                    local result, handle = sampGetCharHandleBySampPlayerId(pfd)
-    
-                    if result and doesCharExist(handle) and isCharOnScreen(handle) then
-                        local px, py, pz = getActiveCameraCoordinates()
-                        local tpx, tpy, tpz = getBodyPartCoordinates(5, handle)
-    
-                        local result, _ = processLineOfSight(px, py, pz, tpx, tpy, tpz, true, false, false, true, false, true, false, false)
-                        if not result then
-                            local wposX, wposY = convert3DCoordsToScreen(tpx, tpy, tpz)
-    
-                            renderDrawLine(wposX - 3, wposY - 3, wposX + 3, wposY + 3, 1, 0xFFFFFFFF)
-                            renderDrawLine(wposX - 3, wposY + 3, wposX + 3, wposY - 3, 1, 0xFFFFFFFF)
-                        end
-                    end
-                end
-            end
-
-            if getInvisiblity(id) then
-                if pfd ~= nil then
-                    renderFontDrawText(font, '{0088ff}НЕВИДИМОСТЬ', sw * 0.75, sh * 0.88, 0xFFFFFFFF)
-                else
-                    renderFontDrawText(font, '{0088ff}НЕВИДИМОСТЬ', sw * 0.75, sh * 0.91, 0xFFFFFFFF)
-                end
-            end
-
-            if pfd ~= nil then
-                renderFontDrawText(font, 'NAMETAG ['..(nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', sw * 0.902, sh * 0.91, 0xFFFFFFFF, 1)
-            else
-                if getInvisiblity(id) then
-                    renderFontDrawText(font, 'NAMETAG ['..(nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', sw * 0.83, sh * 0.91, 0xFFFFFFFF, 1)
-                else
-                    renderFontDrawText(font, 'NAMETAG ['..(nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', sw * 0.75, sh * 0.91, 0xFFFFFFFF, 1)
-                end
+            scriptBody()
+        else
+            if not without_screen then -- если опция 'Скрывать при скриншоте' отключена
+                scriptBody()
             end
         end
     end
 end
 
 function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
-    if playerid == pfd and sampGetPlayerHealth(playerid) - damage <= 0 then
-        pfd = nil
+    if playerid == pfd then
+        c_pfd_hp = true
     end
 end
 
@@ -292,13 +383,19 @@ function sampev.onServerMessage(color, text)
     if text:find('%[ Мысли %]%: Я не могу искать человека') then
         return false
     end
+    if text:find('%[Агенство%]%: %{......%}Деньги перечислены на ваш банковский счёт.') then
+        if autoscreen then
+            goKeyPressed(0x77)
+            sampAddChatMessage('[ Мысли ]: Скриншот выполненного контракта сохранен.', 0xCCCCCC)
+        end
+    end
 end
 
 function sampev.onPlayerStreamIn(playerid, team, model, position)
     if cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
-                sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] в зоне стрима. Стоимость - {800000}'..v..'${ffffff}.', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {cccccc}[ {800000}'..k..' {cccccc}] в зоне стрима. Стоимость - {800000}'..v..'${ffffff}.', 0xCCCCCC)
             end
         end
     end
@@ -316,10 +413,22 @@ function sampev.onPlayerStreamOut(playerid)
     if cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
-                sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {ffffff}[ {800000}'..k..' {ffffff}] покинул зону стрима.', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {cccccc}[ {800000}'..k..' {cccccc}] покинул зону стрима.', 0xCCCCCC)
             end
         end
     end
+end
+
+function sampev.onSendChat(msg)
+    if ooc_only then
+        if not msg:find('^>') then
+            sampSendChat('/b '..msg)
+            return false
+        else
+            local msg = msg:gsub('>', '')
+            return {msg}
+        end
+    end  
 end
 
 function getInvisiblity(id)
@@ -327,5 +436,119 @@ function getInvisiblity(id)
         return true 
     else 
         return false
+    end
+end
+
+function sampGetPlayerIdByNickname(nick)
+    for i = 0, sampGetMaxPlayerId(false) do
+        if sampIsPlayerConnected(i) then
+            if sampGetPlayerNickname(i) == nick then
+                id = i
+                break
+            end
+        end
+    end
+
+    if id ~= nil then 
+        return id
+    else 
+        return false
+    end
+end
+
+function goKeyPressed(id)
+    lua_thread.create(function ()
+        setVirtualKeyDown(id, true)
+        wait(100)
+        setVirtualKeyDown(id, false)
+    end)
+end
+
+function scriptMenu()
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Просмотр последних нововведений\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот при выполненном контракте\t'..(autoscreen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Yes' or '{ff0000}No'), 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+end
+
+function scriptBody()
+    local sw, sh = getScreenResolution()
+
+    if otstrel then
+        lua_thread.create(function ()
+            if os.clock() - time_otstrel >= 10 then
+                otstrel_online = {}
+                for k, v in pairs(otstrel_list) do
+                    if sampGetPlayerIdByNickname(v) ~= nil then
+                        table.insert(otstrel_online, v)
+                    end
+                end
+                time_otstrel = os.clock()
+            end
+        end)
+    end
+
+    if cstream then
+        lua_thread.create(function ()
+            if os.clock() - time_stream >= 10 then
+                c_ids = {}
+                sampSendChat('/contractas')
+                openContractas = true
+                time_stream = os.clock()
+            end
+        end)
+    end
+
+    if pfd ~= nil then
+        lua_thread.create(function ()
+            if os.clock() - time_find >= 4 then
+                if thispp or search_other_servers then
+                    sampSendChat('/find '..pfd)
+                end
+                time_find = os.clock()
+            end
+        end)
+
+        if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(pfd)) then
+            renderFontDrawText(font, '{ff0000}ПОИСК: {ffffff}'..sampGetPlayerNickname(pfd)..' [ '..pfd..' ]', sw * 0.75, sh * 0.91, 0xFFFFFFFF, 1)
+            
+            if metka then
+                local result, handle = sampGetCharHandleBySampPlayerId(pfd)
+
+                if result and doesCharExist(handle) and isCharOnScreen(handle) then
+                    local px, py, pz = getActiveCameraCoordinates()
+                    local tpx, tpy, tpz = getBodyPartCoordinates(5, handle)
+
+                    local result, _ = processLineOfSight(px, py, pz, tpx, tpy, tpz, true, false, false, true, false, true, false, false)
+                    if not result then
+                        local wposX, wposY = convert3DCoordsToScreen(tpx, tpy, tpz)
+
+                        renderDrawLine(wposX - 3, wposY - 3, wposX + 3, wposY + 3, 1, 0xFFFFFFFF)
+                        renderDrawLine(wposX - 3, wposY + 3, wposX + 3, wposY - 3, 1, 0xFFFFFFFF)
+                    end
+                end
+            end
+        end
+    end
+
+    if getInvisiblity(id) then
+        if pfd ~= nil then
+            renderFontDrawText(font, '{0088ff}НЕВИДИМОСТЬ', sw * 0.75, sh * 0.88, 0xFFFFFFFF)
+        else
+            renderFontDrawText(font, '{0088ff}НЕВИДИМОСТЬ', sw * 0.75, sh * 0.91, 0xFFFFFFFF)
+        end
+    end
+
+    if pfd ~= nil then
+        renderFontDrawText(font, 'NAMETAG ['..(nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', sw * 0.902, sh * 0.91, 0xFFFFFFFF, 1)
+    else
+        if getInvisiblity(id) then
+            renderFontDrawText(font, 'NAMETAG ['..(nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', sw * 0.83, sh * 0.91, 0xFFFFFFFF, 1)
+        else
+            renderFontDrawText(font, 'NAMETAG ['..(nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', sw * 0.75, sh * 0.91, 0xFFFFFFFF, 1)
+        end
+    end
+end
+
+function onScriptTerminate(script, quit)
+    if script == thisScript() then
+        inicfg.save(mainIni, config_path)
     end
 end
