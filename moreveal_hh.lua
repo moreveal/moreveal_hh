@@ -74,8 +74,8 @@ local time_find = os.clock() -- таймер /find
 local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
 local time_otstrel = os.clock() -- таймер чекера людей из списка отстрела
 
-font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для рендера большей части надписей
-font_hud = renderCreateFont('Bahnschrift Bold', 14) -- подключение шрифта для рендера остального текста
+font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
+font_hud = renderCreateFont('Bahnschrift Bold', 14) -- подключение шрифта для остального текста
 
 function main()
     if not isSampLoaded() or not isSampfuncsLoaded() then return end
@@ -107,8 +107,19 @@ function main()
     mainIni = inicfg.load(nil, config_path)
 
     if not doesFileExist(config_path) then
-        local f = io.open(config_path, 'w+')
-        f:close()
+        mainIni = inicfg.load({
+        config = {
+            cstream = 0,
+            autoscreen = 0,
+            metka = 0,
+            without_screen = 0,
+            otstrel = 0,
+            ooc_only = 0,
+            search_other_servers = 0,
+            onlypp = 0,
+            autoupdate = 1
+            }
+        }, '/config/hh_config.ini')
     else
         if mainIni.config.cstream == 0 then cstream = false else cstream = true end
         if mainIni.config.autoscreen == 0 then autoscreen = false else autoscreen = true end
@@ -282,11 +293,11 @@ function main()
 
         if c_pfd_hp then
             lua_thread.create(function ()
-                wait(100)
+                wait(300)
                 if sampGetPlayerHealth(pfd) <= 0 then
                     if autoscreen then
                         goKeyPressed(0x77)
-                        sampAddChatMessage('[ Мысли ]: Скриншот выполненного контракта сохранен.', 0xCCCCCC)
+                        sampAddChatMessage('[ Мысли ]: Скриншот выполненного контракта выполнен', 0xCCCCCC)
                     end
                     pfd = nil
                 end
@@ -294,10 +305,10 @@ function main()
             c_pfd_hp = false
         end
 
-        if not isKeyDown(0x77) then -- если кнопка F8 не нажата
+        if not isKeyDown(0x77) then
             scriptBody()
         else
-            if not without_screen then -- если опция 'Скрывать при скриншоте' отключена
+            if not without_screen then
                 scriptBody()
             end
         end
@@ -522,7 +533,7 @@ function scriptBody()
                     local px, py, pz = getActiveCameraCoordinates()
                     local tpx, tpy, tpz = getBodyPartCoordinates(5, handle)
 
-                    local result, _ = processLineOfSight(px, py, pz, tpx, tpy, tpz, true, false, false, true, false, true, false, false)
+                    local result = processLineOfSight(px, py, pz, tpx, tpy, tpz, true, false, false, true, false, true, false, false)
                     if not result then
                         local wposX, wposY = convert3DCoordsToScreen(tpx, tpy, tpz)
 
