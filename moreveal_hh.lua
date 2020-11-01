@@ -253,7 +253,7 @@ function main()
                 if listitem == 4 then
                     without_screen = not without_screen
                     if without_screen == false then mainIni.config.without_screen = 0 else mainIni.config.without_screen = 1 end
-                    sampAddChatMessage('[ Мысли ]: Теперь скрипт '..(without_screen and 'не будет' or 'будет')..' скрываться при скриншоте', 0xCCCCCC)
+                    sampAddChatMessage('[ Мысли ]: Теперь скрипт '..(without_screen and 'будет' or 'не будет')..' скрываться при скриншоте', 0xCCCCCC)
                 end
                 if listitem == 5 then
                     otstrel = not otstrel
@@ -320,7 +320,13 @@ function main()
             c_pfd_hp = false
         end
 
-        if not isKeyDown(0x77) then
+        if isKeyDown(0x10) and isKeyDown(0x4D) or isKeyDown(0x77) or isKeyDown(0x74) then
+            pressed_screen = true
+        else
+            pressed_screen = false
+        end
+
+        if not pressed_screen then
             scriptBody()
         else
             if not without_screen then
@@ -497,7 +503,7 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Просмотр последних нововведений\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(autoscreen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Yes' or '{ff0000}No')..'\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Просмотр последних нововведений\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(autoscreen and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Да' or '{ff0000}Нет')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Да' or '{ff0000}Нет')..'\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function screenct()
