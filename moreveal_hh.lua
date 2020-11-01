@@ -136,14 +136,27 @@ function main()
     if otstrel then
         local otstrel_path = getWorkingDirectory()..'/config/otstrel.txt'
         local f = io.open(otstrel_path, 'r+')
-        if f == nil then f = io.open(otstrel_path, 'w') end
-        for line in f:lines() do
-            table.insert(otstrel_list, line)
+        if f == nil then 
+            f = io.open(otstrel_path, 'w') 
+        else
+            for line in f:lines() do
+                table.insert(otstrel_list, line)
+            end
         end
         f:close()
     end
 
     repeat wait(0) until sampIsLocalPlayerSpawned() and isCharOnScreen(PLAYER_PED)
+
+    if otstrel then
+        for _, v in pairs(otstrel_list) do
+            local id = sampGetPlayerIdByNickname(v)
+            if id then
+                table.insert(otstrel_online, {id = id, name = sampGetPlayerNickname(id)})
+            end
+        end
+        sampAddChatMessage('[ Отстрел ]: В сети найдено '..table.maxn(otstrel_online)..' человек из списка.', 0xCCCCCC)
+    end
 
     local response = requests.get(update_url)
     new_version, text_new_version = response.text:match('(%d+) | (.+)')
@@ -160,16 +173,6 @@ function main()
     if thispp then
         sampSendChat('/stats')
         openStats = true
-    end
-
-    if otstrel then
-        for k, v in pairs(otstrel_list) do
-            local id = sampGetPlayerIdByNickname(v)
-            if id ~= nil then
-                table.insert(otstrel_online, id)
-            end
-        end
-        sampAddChatMessage('[ Отстрел ]: В сети обнаружено '..table.maxn(otstrel_online)..' человек из списка.', 0xCCCCCC)
     end
 
     sampRegisterChatCommand('pfd', function(arg)
@@ -194,12 +197,14 @@ function main()
 
     sampRegisterChatCommand('otstrel_list', function()
         local dialog_text
-        for k, v in pairs(otstrel_online) do
-            local color = string.format('%06X', bit.band(sampGetPlayerColor(v),  0xFFFFFF))
+        for k = 1, table.maxn(otstrel_online) do
+            local id = otstrel_online[k]['id']
+            local name = otstrel_online[k]['name']
+            local color = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
             if dialog_text == nil then
-                dialog_text = 'Никнейм\tID\n'..'{'..color..'}'..sampGetPlayerNickname(v)..'\t[ '..v..' ]\n'
+                dialog_text = 'Никнейм\tID\n'..'{'..color..'}'..name..'\t'..id..'\n'
             else
-                dialog_text = dialog_text..'{'..color..'}'..sampGetPlayerNickname(v)..'\t[ '..v..' ]\n'
+                dialog_text = dialog_text..'{'..color..'}'..name..'\t'..id..'\n'
             end
         end
         sampShowDialog(D_INVALID, 'Список людей из списка отстрела {008000}Online', dialog_text, '*', nil, DIALOG_STYLE_TABLIST_HEADERS)
@@ -255,6 +260,7 @@ function main()
                 end
                 if listitem == 5 then
                     otstrel = not otstrel
+                    time_otstrel = os.clock()
                     if otstrel == false then mainIni.config.otstrel = 0 else mainIni.config.otstrel = 1 end
                     if not doesFileExist(getWorkingDirectory()..'/config/otstrel.txt') then
                         local f = io.open(getWorkingDirectory()..'/config/otstrel.txt', 'w')
@@ -273,9 +279,9 @@ function main()
                     sampAddChatMessage('[ Мысли ]: Теперь поиск '..(search_other_servers and 'будет' or 'не будет')..' работать на сторонних серверах', 0xCCCCCC)
                 end
                 if listitem == 8 then
-                    sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ Shift + M ]', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ Shift + 0 ]', 0xCCCCCC)
                     sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
-                    sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал сочетание клавиш [ Shift + M ], либо F5, чтобы выйти из этого режима', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал сочетание клавиш [ Shift + 0 ], либо F5, чтобы выйти из этого режима', 0xCCCCCC)
                     test_as = true
                     openMenu = false
                 end
@@ -318,7 +324,7 @@ function main()
             c_pfd_hp = false
         end
 
-        if isKeyDown(0x10) and isKeyDown(0x4D) or isKeyDown(0x77) or isKeyDown(0x74) then
+        if isKeyDown(0x10) and isKeyDown(0x30) or isKeyDown(0x77) or isKeyDown(0x74) then
             pressed_screen = true
         else
             pressed_screen = false
@@ -475,20 +481,12 @@ function getInvisiblity(id)
     end
 end
 
-function sampGetPlayerIdByNickname(nick)
+function sampGetPlayerIdByNickname(name)
+    local name = tostring(name)
     for i = 0, sampGetMaxPlayerId(false) do
-        if sampIsPlayerConnected(i) then
-            if sampGetPlayerNickname(i) == nick then
-                id = i
-                break
-            end
+        if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == name then
+            return i
         end
-    end
-
-    if id ~= nil then 
-        return id
-    else 
-        return false
     end
 end
 
@@ -506,7 +504,7 @@ end
 
 function screenct()
     goKeyPressed(0x10) -- Shift
-    goKeyPressed(0x4D) -- M
+    goKeyPressed(0x30) -- 0
     sampAddChatMessage('[ Мысли ]: Скриншот выполненного контракта выполнен', 0xCCCCCC)
 end
 
@@ -518,8 +516,9 @@ function scriptBody()
             if os.clock() - time_otstrel >= 10 then
                 otstrel_online = {}
                 for k, v in pairs(otstrel_list) do
-                    if sampGetPlayerIdByNickname(v) ~= nil then
-                        table.insert(otstrel_online, v)
+                    local id = sampGetPlayerIdByNickname(v)
+                    if id then
+                        table.insert(otstrel_online, {id = id, name = sampGetPlayerNickname(id)})
                     end
                 end
                 time_otstrel = os.clock()
