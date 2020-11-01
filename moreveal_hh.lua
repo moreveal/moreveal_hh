@@ -332,7 +332,7 @@ function main()
             c_pfd_hp = false
         end
 
-        if isKeyDown(0x10) and isKeyDown(0x30) or isKeyDown(0x77) or isKeyDown(0x74) then
+        if isKeyDown(0x10) and isKeyDown(0x30) or isKeyDown(0x74) or isKeyDown(0x77)then
             pressed_screen = true
         else
             pressed_screen = false
@@ -342,7 +342,9 @@ function main()
             scriptBody()
         else
             if not without_screen then
-                scriptBody()
+                if not isKeyDown(0x74) then
+                    scriptBody()
+                end
             end
         end
     end
