@@ -82,7 +82,7 @@ function main()
     while not isSampAvailable() do wait(100) end
 
     if not doesFileExist(getWorkingDirectory()..'/lib/requests.lua') then
-        local requests_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/requests.lua'
+        local requests_url = 'https://www.dropbox.com/s/ytymzr9p8bw6vui/requests.lua?dl=1'
         local requests_path = getWorkingDirectory()..'/lib/requests.lua'
         downloadUrlToFile(requests_url, requests_path, function(id, status) 
             if status == dlstatus.STATUS_ENDDOWNLOADDATA then
