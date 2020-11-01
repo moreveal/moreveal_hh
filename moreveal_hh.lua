@@ -48,9 +48,10 @@ local last_news = [[
     {ff0000}*{ffffff} По умолчанию поиск жертвы не ведется на сторонних серверах
     {ff0000}*{ffffff} Возможность включения OOC-чата по умолчанию
     {ff0000}*{ffffff} Возможность авто-скриншота при выполнении контракта
+      [только при убийстве цели, предварительно занесенной в PFD]
     {ff0000}*{ffffff} Возможность выключения скрипта при скриншоте
     {ff0000}*{ffffff} Команда [/cstream] была убрана, ввиду её переноса 
-    в основное меню
+      в основное меню
     {ff0000}*{ffffff} Поиск игрока, занесенного в PFD, совершается раз в 4 секунды
 
 {cccccc}Помимо этого было исправлено несколько недочетов
@@ -273,7 +274,24 @@ function main()
                     if search_other_servers == false then mainIni.config.search_other_servers = 0 else mainIni.config.search_other_servers = 1 end
                     sampAddChatMessage('[ Мысли ]: Теперь поиск '..(search_other_servers and 'будет' or 'не будет')..' работать на сторонних серверах', 0xCCCCCC)
                 end
+                if listitem == 8 then
+                    sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ Shift + M ]', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал сочетание клавиш [ Shift + M ], либо F5, чтобы выйти из этого режима', 0xCCCCCC)
+                    test_as = true
+                    openMenu = false
+                end
                 if openMenu then scriptMenu() end
+            end
+        end
+
+        if test_as then
+            if isKeyJustPressed(0x73) then
+                screenct()
+            end
+            if isKeyJustPressed(0x74) then
+                sampAddChatMessage('[ Hitman Helper ]: Вы вышли из режима тестирования авто-скриншота', 0xCCCCCC)
+                test_as = false
             end
         end
 
@@ -295,10 +313,7 @@ function main()
             lua_thread.create(function ()
                 wait(300)
                 if sampGetPlayerHealth(pfd) <= 0 then
-                    if autoscreen then
-                        goKeyPressed(0x77)
-                        sampAddChatMessage('[ Мысли ]: Скриншот выполненного контракта выполнен', 0xCCCCCC)
-                    end
+                    if autoscreen then screenct() end
                     pfd = nil
                 end
             end)
@@ -482,7 +497,13 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Просмотр последних нововведений\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(autoscreen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Yes' or '{ff0000}No'), 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Просмотр последних нововведений\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(autoscreen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Контракты в зоне стрима\t'..(cstream and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Метка на голове игрока, занесенного в PFD\t'..(metka and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Скрывать при скриншоте\t'..(without_screen and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Чекер отстрела\t'..(otstrel and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}OOC-чат по умолчанию\t'..(ooc_only and '{008000}Yes' or '{ff0000}No')..'\n{ffffff}Поиск игрока, занесенного в PFD, на сторонних серверах\t'..(search_other_servers and '{008000}Yes' or '{ff0000}No')..'\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+end
+
+function screenct()
+    goKeyPressed(0x10) -- Shift
+    goKeyPressed(0x4D) -- M
+    sampAddChatMessage('[ Мысли ]: Скриншот выполненного контракта выполнен', 0xCCCCCC)
 end
 
 function scriptBody()
