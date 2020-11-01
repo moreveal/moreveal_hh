@@ -196,6 +196,14 @@ function main()
     sampRegisterChatCommand('sethh', scriptMenu)
 
     sampRegisterChatCommand('otstrel_list', function()
+        otstrel_online = {}
+        for k, v in pairs(otstrel_list) do
+            local id = sampGetPlayerIdByNickname(v)
+            if id then
+                table.insert(otstrel_online, {id = id, name = sampGetPlayerNickname(id)})
+            end
+        end
+
         local dialog_text
         for k = 1, table.maxn(otstrel_online) do
             local id = otstrel_online[k]['id']
@@ -511,7 +519,7 @@ end
 function scriptBody()
     local sw, sh = getScreenResolution()
 
-    if otstrel then
+    --[[if otstrel then
         lua_thread.create(function ()
             if os.clock() - time_otstrel >= 10 then
                 otstrel_online = {}
@@ -524,7 +532,7 @@ function scriptBody()
                 time_otstrel = os.clock()
             end
         end)
-    end
+    end]]
 
     if cstream then
         lua_thread.create(function ()
