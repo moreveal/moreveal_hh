@@ -21,14 +21,14 @@ function getBodyPartCoordinates(id, handle)
     return vec[0], vec[1], vec[2]
 end
 
-local cfd -- ID Р¶РµСЂС‚РІС‹
-local c_ids = {} -- Р»СЋРґРё РёР· /contractas
-local anonymizer_names = {} -- РЅРёРєРё РІ Р°РЅРѕРЅРёРјР°Р№Р·РµСЂРµ
-local weapons_list = {} -- РЅР°Р·РІР°РЅРёСЏ РѕСЂСѓР¶РёР№
-local macrosses_list = {} -- РјР°РєСЂРѕСЃС‹
+local cfd -- ID жертвы
+local c_ids = {} -- люди из /contractas
+local anonymizer_names = {} -- ники в анонимайзере
+local weapons_list = {} -- названия оружий
+local macrosses_list = {} -- макросы
 
-local otstrel_list = {} -- Р»СЋРґРё, СЃРѕСЃС‚РѕСЏС‰РёРµ РІ СЃРїРёСЃРєРµ РѕС‚СЃС‚СЂРµР»Р°
-local otstrel_online = {} -- Р»СЋРґРё, СЃРѕСЃС‚РѕСЏС‰РёРµ РІ СЃРїРёСЃРєРµ РѕС‚СЃС‚СЂРµР»Р° РѕРЅР»Р°Р№РЅ
+local otstrel_list = {} -- люди, состоящие в списке отстрела
+local otstrel_online = {} -- люди, состоящие в списке отстрела онлайн
 local car = {
     engine = false,
     light = false,
@@ -41,43 +41,43 @@ local car = {
 
 local autogoc_price = 0
 local carmenu_count = 0
-local nkeys_bind = {} -- С…СЂР°РЅРёС‚ id РєР»Р°РІРёС€ РїСЂРё РёР·РјРµРЅРµРЅРёРё РјР°РєСЂРѕСЃР°
+local nkeys_bind = {} -- хранит id клавиш при изменении макроса
 
 local anonymizer_path = getWorkingDirectory()..'/config/Hitman Helper/anonymizer.txt'
 local otstrel_path = getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt'
 
-local D_SETCOLOR = 5111 -- РґРёР°Р»РѕРі РґР»СЏ РІС‹Р±РѕСЂР° С†РІРµС‚Р°
-local D_SETTING = 5112 -- РґРёР°Р»РѕРі РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё СЃРєСЂРёРїС‚Р°
-local D_INVALID = 5113 -- РґРёР°Р»РѕРі, РёСЃРїРѕР»СЊР·СѓСЋС‰РёР№СЃСЏ РґР»СЏ РІС‹РІРѕРґР° РёРЅС„РѕСЂРјР°С†РёРё
-local D_CSETTING = 5114 -- РґРёР°Р»РѕРі РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё С‡Р°С‚Р°
-local D_MSETTING = 5115 -- РґРёР°Р»РѕРі РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё РјР°РєСЂРѕСЃРѕРІ
+local D_SETCOLOR = 5111 -- диалог для выбора цвета
+local D_SETTING = 5112 -- диалог для настройки скрипта
+local D_INVALID = 5113 -- диалог, использующийся для вывода информации
+local D_CSETTING = 5114 -- диалог для настройки чата
+local D_MSETTING = 5115 -- диалог для настройки макросов
 
-local D_ASETTING_ONE = 5116 -- РґРёР°Р»РѕРі РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё Р°РЅРѕРЅРёРјР°Р№Р·РµСЂР° (1)
-local D_ASETTING_TWO = 5117 -- РґРёР°Р»РѕРі РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё Р°РЅРѕРЅРёРјР°Р№Р·РµСЂР° (2)
-local D_ASETTING_THREE = 5118 -- РґРёР°Р»РѕРі РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё Р°РЅРѕРЅРёРјР°Р№Р·РµСЂР° (3)
+local D_ASETTING_ONE = 5116 -- диалог для настройки анонимайзера (1)
+local D_ASETTING_TWO = 5117 -- диалог для настройки анонимайзера (2)
+local D_ASETTING_THREE = 5118 -- диалог для настройки анонимайзера (3)
 
-local D_GSETTING_ONE = 5119 -- РґРёР°Р»РѕРі РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё РЅР°Р·РІР°РЅРёСЏ РѕСЂСѓР¶РёР№ (1)
-local D_GSETTING_TWO = 5120 -- РґРёР°Р»РѕРі РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё РЅР°Р·РІР°РЅРёСЏ РѕСЂСѓР¶РёР№ (2)
+local D_GSETTING_ONE = 5119 -- диалог для настройки названия оружий (1)
+local D_GSETTING_TWO = 5120 -- диалог для настройки названия оружий (2)
 
-local D_TNSETTING_ONE = 5121 -- РґРёР°Р»РѕРі РґР»СЏ РІС‹Р±РѕСЂР° РІСЂРµРјРµРЅРЅРѕРіРѕ РЅРёРєРЅРµР№РјР° (1)
-local D_TNSETTING_TWO = 5122 -- РґРёР°Р»РѕРі РґР»СЏ РІС‹Р±РѕСЂР° РІСЂРµРјРµРЅРЅРѕРіРѕ РЅРёРєРЅРµР№РјР° (2)
-local D_TNSETTING_THREE = 5123 -- РґРёР°Р»РѕРі РґР»СЏ РІС‹Р±РѕСЂР° РІСЂРµРјРµРЅРЅРѕРіРѕ РЅРёРєРЅРµР№РјР° (3)
+local D_TNSETTING_ONE = 5121 -- диалог для выбора временного никнейма (1)
+local D_TNSETTING_TWO = 5122 -- диалог для выбора временного никнейма (2)
+local D_TNSETTING_THREE = 5123 -- диалог для выбора временного никнейма (3)
 
-local script_version = 32 --[[ РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ Р°РІС‚РѕРѕР±РЅРѕРІР»РµРЅРёСЏ, РІРѕ РёР·Р±РµР¶Р°РЅРёРµ РїСЂРѕР±Р»РµРј 
-СЃ РїРѕР»СѓС‡РµРЅРёРµРј РЅРѕРІС‹С… РѕР±РЅРѕРІР»РµРЅРёР№, СЂРµРєРѕРјРµРЅРґСѓРµС‚СЃСЏ РЅРµ РёР·РјРµРЅСЏС‚СЊ. Р’ СЃР»СѓС‡Р°Рµ РёС… РїРѕСЏРІР»РµРЅРёСЏ РёР·РјРµРЅРёС‚Рµ Р·РЅР°С‡РµРЅРёРµ РЅР° "1" ]]
-local text_version = '1.4' -- РІРµСЂСЃРёСЏ РґР»СЏ РІС‹РІРѕРґР° РІ РѕРєРЅРµ РЅР°СЃС‚СЂРѕРµРє, РЅРµ РёР·РјРµРЅСЏС‚СЊ
+local script_version = 33 --[[ Используется для автообновления, во избежание проблем 
+с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
+local text_version = '1.4' -- версия для вывода в окне настроек, не изменять
 
 local openStats = false
 local openContractas = false
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
 
-local time_find = os.clock() -- С‚Р°Р№РјРµСЂ /find
-local time_stream = os.clock() -- С‚Р°Р№РјРµСЂ С‡РµРєРµСЂР° РєРѕРЅС‚СЂР°РєС‚РѕРІ РІ Р·РѕРЅРµ СЃС‚СЂРёРјР°
-local time_otstrel = os.clock() -- С‚Р°Р№РјРµСЂ С‡РµРєРµСЂР° Р»СЋРґРµР№ РёР· СЃРїРёСЃРєР° РѕС‚СЃС‚СЂРµР»Р°
+local time_find = os.clock() -- таймер /find
+local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
+local time_otstrel = os.clock() -- таймер чекера людей из списка отстрела
 
-font = renderCreateFont('Bahnschrift Bold', 10) -- РїРѕРґРєР»СЋС‡РµРЅРёРµ С€СЂРёС„С‚Р° РґР»СЏ Р±РѕР»СЊС€РµР№ С‡Р°СЃС‚Рё РЅР°РґРїРёСЃРµР№
-font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- РїРѕРґРєР»СЋС‡РµРЅРёРµ С€СЂРёС„С‚Р° РґР»СЏ РѕСЃС‚Р°Р»СЊРЅРѕРіРѕ С‚РµРєСЃС‚Р°
+font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
+font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- подключение шрифта для остального текста
 
 function main()
     if not isSampLoaded() or not isSampfuncsLoaded() then return end
@@ -211,7 +211,7 @@ function main()
     if not doesFileExist(getWorkingDirectory()..'/lib/requests.lua') then
         downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/lib/requests/requests.lua', getWorkingDirectory()..'/lib/requests.lua', function(id, status) 
             if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                sampAddChatMessage("[ Hitman Helper ]: Р‘РёР±Р»РёРѕС‚РµРєР° 'requests' СѓСЃС‚Р°РЅРѕРІР»РµРЅР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.", 0xCCCCCC)
+                sampAddChatMessage("[ Hitman Helper ]: Библиотека 'requests' установлена автоматически.", 0xCCCCCC)
             end
         end)
         wait(1000)
@@ -221,7 +221,7 @@ function main()
     local ip, port = sampGetCurrentServerAddress()
     if ip ~= '176.32.37.62' and port ~= '7777' then
         if mainIni.config.onlypp then
-            sampAddChatMessage('[ Hitman Helper ]: Р­С‚Рѕ РЅРµ Pears Project, РЅРµ РґСѓРјР°СЋ, С‡С‚Рѕ СЏ Р±СѓРґСѓ РїРѕР»РµР·РµРЅ С‚РµР±Рµ С‚СѓС‚..', 0xCCCCCC)
+            sampAddChatMessage('[ Hitman Helper ]: Это не Pears Project, не думаю, что я буду полезен тебе тут..', 0xCCCCCC)
             thisScript():unload()
         end
     else
@@ -268,11 +268,11 @@ function main()
 
     local response = requests.get(update_url)
     new_version, text_new_version = response.text:match('(%d+) | (.+)')
-    if tonumber(new_version) > script_version then update = true end
+    if tonumber(new_version) > script_version then updateScript() update = true end
     changelog = u8:decode(requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/last_news.txt').text)
 
     if not update then
-        sampAddChatMessage('[ Hitman Helper ]: РџСЂРёРІРµС‚, '..sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))):gsub('_', ' ')..', РґР»СЏ РѕС‚РєСЂС‹С‚РёСЏ РЅР°СЃС‚СЂРѕРµРє СЃРєСЂРёРїС‚Р° РЅР°Р¶РјРё [ '.. layoutMacrossString('setting')..' ]', 0xCCCCCC)
+        sampAddChatMessage('[ Hitman Helper ]: Привет, '..sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))):gsub('_', ' ')..', для открытия настроек скрипта нажми [ '.. layoutMacrossString('setting')..' ]', 0xCCCCCC)
     end
     if mainIni.config.otstrel then loadOtstrelList() end
 
@@ -286,39 +286,39 @@ function main()
         if #price ~= 0 and not price:find('%D') then
             autogoc_price = tonumber(price)
             if autogoc_price ~= 0 then
-                sampAddChatMessage('[ РњС‹СЃР»Рё ]: РЇ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РІРѕР·СЊРјСѓ РєРѕРЅС‚СЂР°РєС‚ РЅР° СЃСѓРјРјСѓ РѕС‚ {3caa3c}'..setpoint(price)..'$', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Я автоматически возьму контракт на сумму от {3caa3c}'..setpoint(price)..'$', 0xCCCCCC)
             else
-                sampAddChatMessage('[ РњС‹СЃР»Рё ]: РЇ РѕС‚РєР»СЋС‡РёР» Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РІР·СЏС‚РёРµ РєРѕРЅС‚СЂР°РєС‚Р°', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Я отключил автоматическое взятие контракта', 0xCCCCCC)
             end
         else
-            sampAddChatMessage('[ РњС‹СЃР»Рё ]: РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РІР·СЏС‚РёРµ РєРѕРЅС‚СЂР°РєС‚Р°: {FF6347}/autogoc [СЃСѓРјРјР°]', 0xCCCCCC)
+            sampAddChatMessage('[ Мысли ]: Автоматическое взятие контракта: {FF6347}/autogoc [сумма]', 0xCCCCCC)
         end
     end)
 
     sampRegisterChatCommand('shud', function(arg)
         mainIni.config.shud = not mainIni.config.shud
-        sampAddChatMessage('[ Hitman Helper ]: РЎС‚Р°С‚СѓСЃ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ С…СѓРґР° GTA San Andreas: {FF6347}'..(mainIni.config.shud and 'РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ' or 'РЅРµ РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ'), 0xCCCCCC)
+        sampAddChatMessage('[ Hitman Helper ]: Статус отображения стандартного худа GTA San Andreas: {FF6347}'..(mainIni.config.shud and 'отображается' or 'не отображается'), 0xCCCCCC)
     end)
 
     sampRegisterChatCommand('tempname', function(arg)
-        sampShowDialog(D_TNSETTING_ONE, ' ', 'РўРёРї\tР’СЂРµРјРµРЅРЅС‹Р№ РЅРёРєРЅРµР№Рј\n{FF6347}РћС‚СЃС‚СЂРµР»\t{FFFFFF}'..mainIni.tempname.otstrel..'\n{FF6347}РљРѕРЅС‚СЂР°РєС‚С‹\t{FFFFFF}'..mainIni.tempname.contracts..'\n{FF6347}РўСЂРµРЅРёСЂРѕРІРєРё\t{FFFFFF}'..mainIni.tempname.trainings, 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_TABLIST_HEADERS)
+        sampShowDialog(D_TNSETTING_ONE, ' ', 'Тип\tВременный никнейм\n{FF6347}Отстрел\t{FFFFFF}'..mainIni.tempname.otstrel..'\n{FF6347}Контракты\t{FFFFFF}'..mainIni.tempname.contracts..'\n{FF6347}Тренировки\t{FFFFFF}'..mainIni.tempname.trainings, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
     end)
 
     sampRegisterChatCommand('cfd', function(arg)
         if cfd == nil then
             if arg:find('%D') or #arg == 0 then
-                sampAddChatMessage('[ РњС‹СЃР»Рё ]: РќР°С‡Р°Р»Рѕ РїСЂРµСЃР»РµРґРѕРІР°РЅРёСЏ: {FF6347}/cfd [id]', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Начало преследования: {FF6347}/cfd [id]', 0xCCCCCC)
             else
                 if sampIsPlayerConnected(tonumber(arg)) then
                     cfd = tonumber(arg)
-                    --sampAddChatMessage('[ РњС‹СЃР»Рё ]: РџСЂРµСЃР»РµРґРѕРІР°РЅРёРµ Р·Р° '..sampGetPlayerNickname(cfd)..' ['..cfd..'] Р·Р°РїСѓС‰РµРЅРѕ.', 0xCCCCCC)
+                    --sampAddChatMessage('[ Мысли ]: Преследование за '..sampGetPlayerNickname(cfd)..' ['..cfd..'] запущено.', 0xCCCCCC)
                 else
-                    sampAddChatMessage('[ РњС‹СЃР»Рё ]: РљР°Р¶РµС‚СЃСЏ, СЌС‚РѕРіРѕ РёРіСЂРѕРєР° РЅРµС‚ РІ СЃРµС‚Рё', 0xCCCCCC)
+                    sampAddChatMessage('[ Мысли ]: Кажется, этого игрока нет в сети', 0xCCCCCC)
                 end
             end
         else
             cfd = nil
-            --sampAddChatMessage('[ РњС‹СЃР»Рё ]: РџСЂРµСЃР»РµРґРѕРІР°РЅРёРµ РїСЂРµРєСЂР°С‰РµРЅРѕ.', 0xCCCCCC)
+            --sampAddChatMessage('[ Мысли ]: Преследование прекращено.', 0xCCCCCC)
         end
     end)
 
@@ -326,9 +326,9 @@ function main()
 
     sampRegisterChatCommand('zask', function(id)
         if not id:find('%D') and #id ~= 0 then
-            sampSendChat('/f РЇ, РђРіРµРЅС‚ в„–'..acc_id..', РіРѕС‚РѕРІ РїСЂРёСЃС‚СѓРїРёС‚СЊ Рє РІС‹РїРѕР»РЅРµРЅРёСЋ РєРѕРЅС‚СЂР°РєС‚Р° в„–'..id)
+            sampSendChat('/f Я, Агент №'..acc_id..', готов приступить к выполнению контракта №'..id)
         else
-            sampAddChatMessage('[ РњС‹СЃР»Рё ]: Р—Р°РїСЂРѕСЃ РєРѕРЅС‚СЂР°РєС‚Р°: {FF6347}/zask [id]', 0xCCCCCC)
+            sampAddChatMessage('[ Мысли ]: Запрос контракта: {FF6347}/zask [id]', 0xCCCCCC)
         end
     end)
     
@@ -344,13 +344,13 @@ function main()
 
         if setting_bind ~= nil then
             local sw, sh = getScreenResolution()
-            renderFontDrawText(font, "РР·РјРµРЅРµРЅРёРµ РјР°РєСЂРѕСЃР°. РџРѕРѕС‡РµСЂРµРґРЅРѕ РЅР°Р¶РёРјР°Р№С‚Рµ РєР»Р°РІРёС€Рё:", sw / 2 - renderGetFontDrawTextLength(font, "РР·РјРµРЅРµРЅРёРµ РјР°РєСЂРѕСЃР°. РџРѕРѕС‡РµСЂС‘РґРЅРѕ РЅР°Р¶РёРјР°Р№С‚Рµ РєР»Р°РІРёС€Рё:") / 2, sh / 2, 0xFFFFFFFF, true)
-            renderFontDrawText(font, "РњР°РєСЃРёРјСѓРј - 3. Backspace - СЃС‚РµСЂРµС‚СЊ. Enter - РїСЂРёРјРµРЅРёС‚СЊ.", sw / 2 - renderGetFontDrawTextLength(font, "РњР°РєСЃРёРјСѓРј - 3. Backspace - СЃС‚РµСЂРµС‚СЊ. Enter - РїСЂРёРјРµРЅРёС‚СЊ.") / 2, sh / 2 + 20, 0xFFFFFFFF, true)
+            renderFontDrawText(font, "Изменение макроса. Поочередно нажимайте клавиши:", sw / 2 - renderGetFontDrawTextLength(font, "Изменение макроса. Поочерёдно нажимайте клавиши:") / 2, sh / 2, 0xFFFFFFFF, true)
+            renderFontDrawText(font, "Максимум - 3. Backspace - стереть. Enter - применить.", sw / 2 - renderGetFontDrawTextLength(font, "Максимум - 3. Backspace - стереть. Enter - применить.") / 2, sh / 2 + 20, 0xFFFFFFFF, true)
             
             local sh_plus = 40
 
             for i = 1, #nkeys_bind, 1 do
-                renderFontDrawText(font, i .. " РєР»Р°РІРёС€Р°: " .. vkeys.id_to_name(nkeys_bind[i]), sw / 2 - renderGetFontDrawTextLength(font, i .. " РєР»Р°РІРёС€Р°: " .. vkeys.id_to_name(nkeys_bind[i])) / 2, sh / 2 + sh_plus, 0xFFFFFFFF, true)
+                renderFontDrawText(font, i .. " клавиша: " .. vkeys.id_to_name(nkeys_bind[i]), sw / 2 - renderGetFontDrawTextLength(font, i .. " клавиша: " .. vkeys.id_to_name(nkeys_bind[i])) / 2, sh / 2 + sh_plus, 0xFFFFFFFF, true)
                 sh_plus = sh_plus + 20
             end
         end
@@ -376,26 +376,8 @@ function main()
                 screenct()
             end
             if isKeyJustPressed(0x74) then
-                sampAddChatMessage('[ Hitman Helper ]: Р’С‹ РІС‹С€Р»Рё РёР· СЂРµР¶РёРјР° С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ Р°РІС‚Рѕ-СЃРєСЂРёРЅС€РѕС‚Р°', 0xCCCCCC)
+                sampAddChatMessage('[ Hitman Helper ]: Вы вышли из режима тестирования авто-скриншота', 0xCCCCCC)
                 test_as = false
-            end
-        end
-
-        if update then
-            if mainIni.config.autoupdate then
-                downloadUrlToFile('https://www.dropbox.com/s/ayjqaiu7n9nun7t/h_helper.lua?dl=1', thisScript().path, function(id, status)
-                    if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                        sampAddChatMessage('[ Hitman Helper ]: РћР±РЅРѕРІР»РµРЅРёРµ Р·Р°РіСЂСѓР¶РµРЅРѕ. РќРѕРІР°СЏ РІРµСЂСЃРёСЏ: '..text_new_version, 0xCCCCCC)
-                        sampAddChatMessage('[ Hitman Helper ]: РќР°С‡РёРЅР°СЋ РїРµСЂРµР·Р°РїСѓСЃРє СЃРєСЂРёРїС‚Р°. РћР¶РёРґР°Р№, СЌС‚Рѕ РЅРµ Р·Р°Р№РјРµС‚ РјРЅРѕРіРѕ РІСЂРµРјРµРЅРё.', 0xCCCCCC)
-                        sampAddChatMessage('[ Hitman Helper ]: Р•СЃР»Рё СЃРєСЂРёРїС‚ РЅРµ Р·Р°РїСѓСЃС‚РёР»СЃСЏ - СЃРєР°С‡Р°Р№ РµРіРѕ РІСЂСѓС‡РЅСѓСЋ, СЃСЃС‹Р»РєР° РѕСЃС‚Р°РІР»РµРЅР° РІ Р»РѕРі-С„Р°Р№Р»Рµ [moonloader/moonloader.log]', 0xCCCCCC)
-                        print('РЎСЃС‹Р»РєР° РЅР° Р°РєС‚СѓР°Р»СЊРЅСѓСЋ РІРµСЂСЃРёСЋ: dropbox.com/s/ayjqaiu7n9nun7t/h_helper.lua')
-                        thisScript():reload()
-                    end 
-                end)
-                update = false
-            else
-                sampAddChatMessage('[ Hitman Helper ]: РќР°Р№РґРµРЅРѕ РЅРѕРІРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ. Р’РµСЂСЃРёСЏ: '..text_new_version, 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: Р РµРєРѕРјРµРЅРґСѓРµС‚СЃСЏ РІРєР»СЋС‡РёС‚СЊ Р°РІС‚РѕРѕР±РЅРѕРІР»РµРЅРёРµ РІ СЃРєСЂРёРїС‚Рµ.', 0xCCCCCC)
             end
         end
 
@@ -414,6 +396,24 @@ function main()
                 end
             end
         end
+    end
+end
+
+function updateScript()
+    if mainIni.config.autoupdate then
+        downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua', thisScript().path, function(id, status)
+            if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+                sampAddChatMessage('[ Hitman Helper ]: Обновление загружено. Новая версия: '..text_new_version, 0xCCCCCC)
+                sampAddChatMessage('[ Hitman Helper ]: Начинаю перезапуск скрипта. Ожидай, это не займет много времени.', 0xCCCCCC)
+                sampAddChatMessage('[ Hitman Helper ]: Если скрипт не запустился - скачай его вручную, ссылка оставлена в лог-файле [moonloader/moonloader.log]', 0xCCCCCC)
+                print('Ссылка на актуальную версию: raw.githubusercontent.com/moreveal_hh/main/script/h_helper.lua')
+                thisScript():reload()
+            end 
+        end)
+        update = false
+    else
+        sampAddChatMessage('[ Hitman Helper ]: Найдено новое обновление. Версия: '..text_new_version, 0xCCCCCC)
+        sampAddChatMessage('[ Hitman Helper ]: Рекомендуется включить автообновление в скрипте.', 0xCCCCCC)
     end
 end
 
@@ -453,14 +453,14 @@ function openOtstrelList()
                         break
                     end
                 end
-                dialog_text = (dialog_text == nil and 'РРіСЂРѕРє\tРЎС‚Р°С‚СѓСЃ\n'..'{'..color..'}'..name..' ['..id..']\t'..status..'\n' or dialog_text..'{'..color..'}'..name..' ['..id..']\t'..status..'\n')
+                dialog_text = (dialog_text == nil and 'Игрок\tСтатус\n'..'{'..color..'}'..name..' ['..id..']\t'..status..'\n' or dialog_text..'{'..color..'}'..name..' ['..id..']\t'..status..'\n')
             end
-            sampShowDialog(D_INVALID, '{ffffff}Р›СЋРґРё РёР· СЃРїРёСЃРєР° РѕС‚СЃС‚СЂРµР»Р° {008000}Online   {ffffff}['..#otstrel_online..']', dialog_text, '*', nil, DIALOG_STYLE_TABLIST_HEADERS)
+            sampShowDialog(D_INVALID, '{ffffff}Люди из списка отстрела {008000}Online   {ffffff}['..#otstrel_online..']', dialog_text, '*', nil, DIALOG_STYLE_TABLIST_HEADERS)
         else
-            sampAddChatMessage('[ РћС‚СЃС‚СЂРµР» ]: Рљ СЃРѕР¶Р°Р»РµРЅРёСЋ, СЌС‚РѕС‚ СЃРїРёСЃРѕРє РїСѓСЃС‚ :(', 0xCCCCCC)
+            sampAddChatMessage('[ Отстрел ]: К сожалению, этот список пуст :(', 0xCCCCCC)
         end
     else
-        sampAddChatMessage('[ РњС‹СЃР»Рё ]: Р§РµРєРµСЂ Р»СЋРґРµР№ РёР· СЃРїРёСЃРєР° РѕС‚СЃС‚СЂРµР»Р° РІС‹РєР»СЋС‡РµРЅ. РЎРїРµСЂРІР° СЏ РґРѕР»Р¶РµРЅ РµРіРѕ РІРєР»СЋС‡РёС‚СЊ.', 0xCCCCCC)
+        sampAddChatMessage('[ Мысли ]: Чекер людей из списка отстрела выключен. Сперва я должен его включить.', 0xCCCCCC)
     end
 end
 
@@ -523,7 +523,7 @@ function loadOtstrelList()
             count = count + 1
         end
     end
-    sampAddChatMessage('[ РћС‚СЃС‚СЂРµР» ]: Р’ СЃРµС‚Рё РЅР°Р№РґРµРЅРѕ '..count..' С‡РµР»РѕРІРµРє РёР· СЃРїРёСЃРєР°.', 0xCCCCCC)
+    sampAddChatMessage('[ Отстрел ]: В сети найдено '..count..' человек из списка.', 0xCCCCCC)
 end
 
 function isKeysDown(key, state)
@@ -582,7 +582,7 @@ function sampev.onPlayerJoin(playerid, color, isnpc, nick)
                         break
                     end 
                 end
-                sampAddChatMessage('[ РћС‚СЃС‚СЂРµР» ]: '..nick..' ['..playerid..'] Р·Р°С€РµР» РЅР° СЃРµСЂРІРµСЂ.', 0xCCCCCC)
+                sampAddChatMessage('[ Отстрел ]: '..nick..' ['..playerid..'] зашел на сервер.', 0xCCCCCC)
                 break
             end
         end
@@ -608,7 +608,7 @@ function sampev.onPlayerQuit(playerid, reason)
                         break 
                     end
                 end
-                sampAddChatMessage('[ РћС‚СЃС‚СЂРµР» ]: '..sampGetPlayerNickname(playerid)..' ['..playerid..'] РїРѕРєРёРЅСѓР» СЃРµСЂРІРµСЂ.', 0xCCCCCC)
+                sampAddChatMessage('[ Отстрел ]: '..sampGetPlayerNickname(playerid)..' ['..playerid..'] покинул сервер.', 0xCCCCCC)
                 break
             end
         end
@@ -618,7 +618,7 @@ end
 function showSettingMacrosses()
     local macrosses_array = {}
     for k, v in pairs(macrosses_list) do macrosses_array[k] = layoutMacrossString(k) end
-    sampShowDialog(D_MSETTING, 'РњР°РєСЂРѕСЃС‹', 'РќР°Р·РІР°РЅРёРµ\tР—РЅР°С‡РµРЅРёРµ\nР‘РёРЅРґС‹ Р°РєС‚РёРІРЅС‹:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Р’С‹СЃС‚Р°РІРёС‚СЊ Р·РЅР°С‡РµРЅРёСЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ\nР’С‹СЂСѓР±РёС‚СЊ Р±Р»РёР¶Р°Р№С€РµРіРѕ Рє СЃРµР±Рµ РёРіСЂРѕРєР°:\t'..macrosses_array.knock..'\nР—Р°РєРёРЅСѓС‚СЊ СЂР°РЅРµРµ РІС‹СЂСѓР±Р»РµРЅРЅРѕРіРѕ РёРіСЂРѕРєР° РІ Р±Р°РіР°Р¶РЅРёРє:\t'..macrosses_array.boot..'\nРћС‚РєСЂС‹С‚СЊ СЃРїРёСЃРѕРє С‡Р»РµРЅРѕРІ РѕСЂРіР°РЅРёР·Р°С†РёРё РѕРЅР»Р°Р№РЅ:\t'..macrosses_array.members..'\nРћС‚РєСЂС‹С‚СЊ СЃРїРёСЃРѕРє РєРѕРЅС‚СЂР°РєС‚РѕРІ:\t'..macrosses_array.contracts..'\nРћС‚РєР°Р·Р°С‚СЊСЃСЏ РѕС‚ РєРѕРЅС‚СЂР°РєС‚Р°:\t'..macrosses_array.cancel..'\nР’Р·СЏС‚СЊ РїРѕСЃР»РµРґРЅРёР№ РєРѕРЅС‚СЂР°РєС‚ РёР· Р·РѕРЅС‹ РїСЂРѕСЂРёСЃРѕРІРєРё:\t'..macrosses_array.getct..'\nРџРѕСЃРјРѕС‚СЂРµС‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РІР·СЏС‚РѕРј РєРѕРЅС‚СЂР°РєС‚Рµ:\t'..macrosses_array.myc..'\nР’РєР»СЋС‡РёС‚СЊ РЅРµРІРёРґРёРјРѕСЃС‚СЊ РЅР° РєР°СЂС‚Рµ:\t'..macrosses_array.invis..'\nРЎРїРёСЃРѕРє РѕС‚СЃС‚СЂРµР»Р° РѕРЅР»Р°Р№РЅ:\t'..macrosses_array.otstrel..'\nРђРґРјРёРЅРёСЃС‚СЂР°С†РёСЏ РѕРЅР»Р°Р№РЅ:\t'..macrosses_array.admins..'\nРЎРѕС‡РµС‚Р°РЅРёРµ РєР»Р°РІРёС€, РЅР°Р¶РёРјР°РµРјРѕРµ РїСЂРё Р°РІС‚РѕСЃРєСЂРёРЅС€РѕС‚Рµ:\t'..macrosses_array.screen..'\nРћС‚РєСЂС‹С‚СЊ РјРµРЅСЋ РЅР°СЃС‚СЂРѕРµРє:\t'..macrosses_array.setting, 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function layoutMacrossString(m_key)
@@ -634,7 +634,7 @@ function layoutMacrossString(m_key)
             string = (m_key[k + 1] ~= nil and (string == nil and key..' + ' or string..key..' + ') or (string == nil and key or string..key))
         end
     end
-    return (string == nil and 'РќРµ РЅР°Р·РЅР°С‡РµРЅРѕ' or string)
+    return (string == nil and 'Не назначено' or string)
 end
 
 function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
@@ -642,7 +642,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
         for k, v in pairs(otstrel_online) do
             if playerid == v.id then
                 if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
-                    sampAddChatMessage('[ РћС‚СЃС‚СЂРµР» ]: РЇ РЅР°РЅРµСЃ СѓСЂРѕРЅ (-'..tostring(damage):match('(%d+)%.')..'HP) РёРіСЂРѕРєСѓ {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] СЃ РѕСЂСѓР¶РёСЏ '..weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)], 0xCCCCCC)
+                    sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)], 0xCCCCCC)
                     if mainIni.config.autoscreen then screenct() end
                     if playerid == cfd then cfd = nil end
                     for s, t in pairs(otstrel_list) do
@@ -697,11 +697,11 @@ function sampev.onSendCommand(cmd)
         local dialog_text = [[
 {0066FF}LSPD [1]
 {6666FF}FBI [2]
-{F4A460}РќР°С†РёРѕРЅР°Р»СЊРЅР°СЏ РіРІР°СЂРґРёСЏ [3]
-{FF6666}РњРёРЅРёСЃС‚РµСЂСЃС‚РІРѕ Р·РґСЂР°РІРѕРѕС…СЂР°РЅРµРЅРёСЏ [4]
+{F4A460}Национальная гвардия [3]
+{FF6666}Министерство здравоохранения [4]
 {CCCC00}La Cosa Nostra [5]
 {990000}Yakuza Mafia [6]
-{FFFFFF}РџСЂР°РІРёС‚РµР»СЊСЃС‚РІРѕ [7]
+{FFFFFF}Правительство [7]
 {CCCCCC}Hitman's Agency [8]
 {FFCC66}CNN [9]
 {003366}Triada Magia [10]
@@ -717,11 +717,11 @@ function sampev.onSendCommand(cmd)
 {90696A}Bikers [20]
 {4B6894}LVPD [21]
 {191970}SWAT [22]
-{333300}РџСЂРёР·С‹РІРЅРёРє [23]
-{00CC99}Р’Р’РЎ [24]
-{339966}Р’РњР¤ [25]
+{333300}Призывник [23]
+{00CC99}ВВС [24]
+{339966}ВМФ [25]
 ]]
-        sampShowDialog(D_SETCOLOR, 'Р’С‹Р±РѕСЂ С†РІРµС‚Р°', dialog_text, 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_LIST)
+        sampShowDialog(D_SETCOLOR, 'Выбор цвета', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
         return false
     end
 
@@ -739,7 +739,7 @@ if cmd:find('^/id ') then
                 [2861666705] = "/col12",
                 [2868880896] = "/col4",
                 [4279782715] = "/cvet 81",
-                [2868838400] = "РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ",
+                [2868838400] = "Администратор",
                 [4282957824] = "/cvet 63",
                 [4279826207] = "/cvet 53",
                 [4290589914] = "/cvet 21",
@@ -753,17 +753,17 @@ if cmd:find('^/id ') then
                 [4284782061] = "/cvet 4",
                 [4294937619] = "/cvet 0",
                 [4283646081] = "/cvet 18",
-                [2868864614] = "РњРµРґРёРє",
+                [2868864614] = "Медик",
                 [4287867676] = "/cvet 50",
                 [4282129421] = "/cvet 61",
                 [2868838655] = "/col6",
                 [4278550420] = "/cvet 44",
-                [2868890675] = "Р’Р°РіРѕСЃ",
+                [2868890675] = "Вагос",
                 [4294956832] = "/cvet 10",
                 [2860515072] = "/chartreuse",
-                [2862179942] = "Р‘Р°Р№РєРµСЂ",
-                [4290756802] = "РќРµР·Р°Р»РѕРіРёРЅРёРІС€РёР№СЃСЏ",
-                [2865548288] = "РњР°РєР°СЂРѕРЅРЅРёРє",
+                [2862179942] = "Байкер",
+                [4290756802] = "Незалогинившийся",
+                [2865548288] = "Макаронник",
                 [4286265770] = "/cvet 30",
                 [553648127]  = "/inv",
                 [4290901996] = "/cvet 76",
@@ -781,10 +781,10 @@ if cmd:find('^/id ') then
                 [4279367825] = "/cvet 29",
                 [2868903680] = "/yellow",
                 [2868838544] = "/col7",
-                [2858824448] = "РђСЂР°Р±",
+                [2858824448] = "Араб",
                 [2860317696] = "/lawngreen",
                 [2861236363] = "/mediummagenta",
-                [2865548441] = "РЎС‚СЂРёС‚СЂРµР№СЃРµСЂ",
+                [2865548441] = "Стритрейсер",
                 [4294113363] = "/cvet 28",
                 [2864882394] = "/purple",
                 [2868896964] = "/bisque",
@@ -794,8 +794,8 @@ if cmd:find('^/id ') then
                 [4294902015] = "/magenta",
                 [4279424724] = "/cvet 62",
                 [4280581147] = "/cvet 22",
-                [2855508377] = "Р РёС„Р°",
-                [2854972612] = "РџРѕР»РёС†РµР№СЃРєРёР№ Р›Р’",
+                [2855508377] = "Рифа",
+                [2854972612] = "Полицейский ЛВ",
                 [4282981278] = "/cvet 55",
                 [4280963554] = "/cvet 64",
                 [2868892928] = "/col3",
@@ -809,15 +809,15 @@ if cmd:find('^/id ') then
                 [4281326046] = "/cvet 71",
                 [4294638449] = "/cvet 72",
                 [4278571469] = "/cvet 73",
-                [2852139878] = "РўСЂРёР°РґРѕРІРµС†",
+                [2852139878] = "Триадовец",
                 [4291064253] = "/cvet 74",
-                [2862153932] = "Р‘Р°Р»Р»Р°СЃ",
+                [2862153932] = "Баллас",
                 [4291721710] = "/cvet 77",
                 [4287870948] = "/cvet 79",
                 [4291237375] = "/cvet 1",
                 [4280332970] = "/cvet 2",
                 [2863530239] = "/col10",
-                [2862153728] = "РЇРєСѓРґР·Р°",
+                [2862153728] = "Якудза",
                 [4281472170] = "/cvet 80",
                 [4288648284] = "/cvet 88",
                 [4289612697] = "/cvet 82",
@@ -827,7 +827,7 @@ if cmd:find('^/id ') then
                 [4283188078] = "/cvet 84",
                 [4280481639] = "/cvet 36",
                 [4291720894] = "/cvet 86",
-                [2852192255] = "РђС†С‚РµРє",
+                [2852192255] = "Ацтек",
                 [4288695818] = "/cvet 87",
                 [2856714240] = "/darkred",
                 [4278490573] = "/cvet 19",
@@ -840,14 +840,14 @@ if cmd:find('^/id ') then
                 [4284853739] = "/cvet 26",
                 [4293959515] = "/cvet 34",
                 [4293235512] = "/cvet 96",
-                [2858837759] = "Р¤Р‘Р ",
+                [2858837759] = "ФБР",
                 [4293844013] = "/cvet 97",
                 [4292396898] = "/cvet 98",
-                [2853318570] = "РџРѕР»РёС†РµР№СЃРєРёР№ РЎР¤",
+                [2853318570] = "Полицейский СФ",
                 [4279566207] = "/cvet 14",
                 [4293821166] = "/cvet 9",
                 [4292613180] = "/cvet 3",
-                [2852178944] = "Р“СЂСѓРІРѕРІРµС†",
+                [2852178944] = "Грувовец",
                 [2865299200] = "/col1",
                 [2857042096] = "/indigo",
                 [4283689744] = "/cvet 31",
@@ -871,10 +871,10 @@ if cmd:find('^/id ') then
                 [4294722216] = "/cvet 66",
                 [4279536523] = "/cvet 13",
                 [4285551181] = "/cvet 91",
-                [2868890726] = "Р РµРїРѕСЂС‚РµСЂ",
+                [2868890726] = "Репортер",
                 [2868159584] = "/cvet 8",
                 [4290569781] = "/cvet 57",
-                [2855508326] = "РЎРѕР»РґР°С‚ Р’РњР¤",
+                [2855508326] = "Солдат ВМФ",
                 [4289671155] = "/cvet 43",
                 [2853568256] = "/col9",
                 [4280341677] = "/cvet 59",
@@ -882,21 +882,21 @@ if cmd:find('^/id ') then
                 [4279906495] = "/cvet 68",
                 [2863529775] = "/greenyellow",
                 [2853237825] = "/lime",
-                [2855482163] = "Р СѓСЃСЃРєР°СЏ РњР°С„РёСЏ",
+                [2855482163] = "Русская Мафия",
                 [4279012957] = "/cvet 23",
-                [2852153087] = "РџРѕР»РёС†РµР№СЃРєРёР№ LS",
+                [2852153087] = "Полицейский LS",
                 [2852192153] = "/col8",
                 [2860761023] = "/mediumaqua",
-                [2855482112] = "РЎСЂРѕС‡РЅРёРє",
+                [2855482112] = "Срочник",
                 [4293977740] = "/cvet 5",
                 [2863280947] = "/red",
-                [2852179097] = "РЎРѕР»РґР°С‚ Р’Р’РЎ",
+                [2852179097] = "Солдат ВВС",
                 [2852192127] = "/springgreen",
                 [4282377820] = "/cvet 99",
                 [2861367040] = "/col2",
                 [4282190415] = "/cvet 35",
                 [4283788079] = "/cvet 15",
-                [2868903935] = "РџСЂР°РІРёС‚РµР»СЊСЃС‚РІРѕ"
+                [2868903935] = "Правительство"
             }
             local players = {}
             local colour, target_lower
@@ -927,25 +927,25 @@ if cmd:find('^/id ') then
                 end
             end
             if table.maxn(players) ~= 0 then
-                sampAddChatMessage('РџРѕ Р·Р°РїСЂРѕСЃСѓ "'..target..'" РЅР°Р№РґРµРЅС‹ СЃР»РµРґСѓСЋС‰РёРµ РёРіСЂРѕРєРё:', 0xCCCCCC)
+                sampAddChatMessage('По запросу "'..target..'" найдены следующие игроки:', 0xCCCCCC)
                 for i = 1, table.maxn(players) do
-                    colour = (nick_colours[players[i]['colour']] == nil and 'РќРµРёР·РІРµСЃС‚РЅРѕ' or nick_colours[players[i]['colour']])
+                    colour = (nick_colours[players[i]['colour']] == nil and 'Неизвестно' or nick_colours[players[i]['colour']])
                     local color = string.format('%06X', bit.band(sampGetPlayerColor(players[i]['id']),  0xFFFFFF))
-                    sampAddChatMessage('[ '..colour..' ]: {'..color..'}'..players[i]['name']:gsub('_', ' ')..'{cccccc} ['..players[i]['id']..'] | РЈСЂРѕРІРµРЅСЊ: '..players[i]['level']..' | РџРёРЅРі: '..players[i]['ping'], 0xCCCCCC)
+                    sampAddChatMessage('[ '..colour..' ]: {'..color..'}'..players[i]['name']:gsub('_', ' ')..'{cccccc} ['..players[i]['id']..'] | Уровень: '..players[i]['level']..' | Пинг: '..players[i]['ping'], 0xCCCCCC)
                 end
             else
                 if not target:find('%D') then
                     if sampIsPlayerConnected(tonumber(target_lower)) or select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)) == tonumber(target_lower) then
                         target = tonumber(target_lower)
-                        colour = (nick_colours[sampGetPlayerColor(target_lower)] == nil and 'РќРµРёР·РІРµСЃС‚РЅРѕ' or nick_colours[sampGetPlayerColor(target)])
+                        colour = (nick_colours[sampGetPlayerColor(target_lower)] == nil and 'Неизвестно' or nick_colours[sampGetPlayerColor(target)])
                         local color = string.format('%06X', bit.band(sampGetPlayerColor(target),  0xFFFFFF))
-                        sampAddChatMessage('РџРѕ Р·Р°РїСЂРѕСЃСѓ "'..target..'" РЅР°Р№РґРµРЅ СЃР»РµРґСѓСЋС‰РёР№ РёРіСЂРѕРє:', 0xCCCCCC)
-                        sampAddChatMessage('[ '..colour..' ]: {'..color..'}'..sampGetPlayerNickname(target):gsub('_', ' ')..'{cccccc} ['..target..'] | РЈСЂРѕРІРµРЅСЊ: '..sampGetPlayerScore(target)..' | РџРёРЅРі: '..sampGetPlayerPing(target), 0xCCCCCC)
+                        sampAddChatMessage('По запросу "'..target..'" найден следующий игрок:', 0xCCCCCC)
+                        sampAddChatMessage('[ '..colour..' ]: {'..color..'}'..sampGetPlayerNickname(target):gsub('_', ' ')..'{cccccc} ['..target..'] | Уровень: '..sampGetPlayerScore(target)..' | Пинг: '..sampGetPlayerPing(target), 0xCCCCCC)
                     else
-                        sampAddChatMessage('[ РњС‹СЃР»Рё ]: РџРѕ Р·Р°РїСЂРѕСЃСѓ "'..target..'" РЅРёС‡РµРіРѕ РЅРµ РЅР°Р№РґРµРЅРѕ..', 0xCCCCCC)
+                        sampAddChatMessage('[ Мысли ]: По запросу "'..target..'" ничего не найдено..', 0xCCCCCC)
                     end
                 else
-                    sampAddChatMessage('[ РњС‹СЃР»Рё ]: РџРѕ Р·Р°РїСЂРѕСЃСѓ "'..target..'" РЅРёС‡РµРіРѕ РЅРµ РЅР°Р№РґРµРЅРѕ..', 0xCCCCCC)
+                    sampAddChatMessage('[ Мысли ]: По запросу "'..target..'" ничего не найдено..', 0xCCCCCC)
                 end
             end
             return false
@@ -954,9 +954,9 @@ if cmd:find('^/id ') then
 end
 
 function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
-    if text:find('{99ff66}РўРµРїРµСЂСЊ РІСЃРµ РІРёРґСЏС‚ СЌС‚Рѕ РёРјСЏ:') then mainIni.config.fakenick = true end
-    if text:find('{99ff66}Р’С‹ РІРµСЂРЅСѓР»Рё СЃРІРѕС‘ РёРјСЏ:') then mainIni.config.fakenick = false end
-    if dialogid == 66 then -- РјРµРЅСЋ СѓРїСЂР°РІР»РµРЅРёСЏ С‚СЂР°РЅСЃРїРѕСЂС‚РѕРј
+    if text:find('{99ff66}Теперь все видят это имя:') then mainIni.config.fakenick = true end
+    if text:find('{99ff66}Вы вернули своё имя:') then mainIni.config.fakenick = false end
+    if dialogid == 66 then -- меню управления транспортом
         if openCarDoors then
             carmenu_count = carmenu_count + 1
             if carmenu_count == 1 then
@@ -968,31 +968,31 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
             return false
         end
     end
-    if dialogid == 586 then -- РґРёР°Р»РѕРі РјРµРЅСЋ Р°РіРµРЅС‚СЃС‚РІР°
+    if dialogid == 586 then -- диалог меню агентства
         if incInvis then
             sampSendDialogResponse(dialogid, 1, 0, -1)
             incInvis = false
             return false
         end
     end
-    if openStats and dialogid == 1500 then -- РґРёР°Р»РѕРі СЃС‚Р°С‚РёСЃС‚РёРєРё
+    if openStats and dialogid == 1500 then -- диалог статистики
         for line in text:gmatch('[^\r\n]+') do
-            if line:find('РђРєРєР°СѓРЅС‚ в„–') then
-                acc_id = line:match('РђРєРєР°СѓРЅС‚ в„–%s?%{......%}?%s?(%d+)')
+            if line:find('Аккаунт №') then
+                acc_id = line:match('Аккаунт №%s?%{......%}?%s?(%d+)')
                 break
             end
         end
         openStats = false
         return false
     end
-    if dialogid == 1700 then -- РґРёР°Р»РѕРі РѕС€РёР±РєРё (Сѓ РІР°С€РµРіРѕ РїРµСЂСЃРѕРЅР°Р¶Р° Р·Р°РЅСЏС‚С‹ СЂСѓРєРё Рё С‚.Рї.)
-		if text:find('{FF6347}Р’С‹ РЅРµ Р·Р° СЂСѓР»С‘Рј С‚СЂР°РЅСЃРїРѕСЂС‚РЅРѕРіРѕ СЃСЂРµРґСЃС‚РІР° %[ РЈРїСЂР°РІР»РµРЅРёРµ С‚СЂР°РЅСЃРїРѕСЂС‚РѕРј ALT %]') then
+    if dialogid == 1700 then -- диалог ошибки (у вашего персонажа заняты руки и т.п.)
+		if text:find('{FF6347}Вы не за рулём транспортного средства %[ Управление транспортом ALT %]') then
 			goKeyPressed(0x12)
 			openCarDoors = true
 			return false
 		end
     end
-    if dialogid == 8999 then -- РґРёР°Р»РѕРі СЃРїРёСЃРєР° Р·Р°РєР°Р·РѕРІ
+    if dialogid == 8999 then -- диалог списка заказов
         if openContractas then
             for line in text:gmatch("[^\r\n]+") do
                 if line:find('%$') then
@@ -1014,11 +1014,11 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
             end
             count = count + 1
         end
-        if result == nil then return sampAddChatMessage('[ РњС‹СЃР»Рё ]: Рљ СЃРѕР¶Р°Р»РµРЅРёСЋ, СЌС‚РѕС‚ СЃРїРёСЃРѕРє РїСѓСЃС‚ :(', 0xCCCCCC) end
+        if result == nil then return sampAddChatMessage('[ Мысли ]: К сожалению, этот список пуст :(', 0xCCCCCC) end
         return {dialogid, style, title, b1, b2, result}
     end
     if mainIni.config.automobile then
-        if dialogid == 365 then -- РґРёР°Р»РѕРі РїСЂРё РѕРїР»Р°С‚Рµ СЃС‡РµС‚Р° РјРѕР±РёР»СЊРЅРѕРіРѕ С‚РµР»РµС„РѕРЅР°
+        if dialogid == 365 then -- диалог при оплате счета мобильного телефона
             for line in text:gmatch('[^\r\n]+') do
                 if line:find('%$') then
                     local pay = 2000 - line:match('(%d+)%$')
@@ -1030,53 +1030,53 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
         end
     end
     if mainIni.config.autofill then
-        if dialogid == 484 then -- РґРёР°Р»РѕРі РїСЂРё Р·Р°РїСЂР°РІРєРµ РЅР°Р·РµРјРЅРѕРіРѕ С‚СЂР°РЅСЃРїРѕСЂС‚Р°
+        if dialogid == 484 then -- диалог при заправке наземного транспорта
             for line in text:gmatch('[^\r\n]+') do
                 if line:find('{99ff66}') then
-                    local fill = line:match('Р”Р»СЏ РїРѕР»РЅРѕРіРѕ Р±Р°РєР° РІР°Рј С‚СЂРµР±СѓРµС‚СЃСЏ: (%d-) Р»РёС‚СЂРѕРІ')
+                    local fill = line:match('Для полного бака вам требуется: (%d-) литров')
                     sampSendDialogResponse(dialogid, 1, nil, fill)
                 end
             end
             return false
         end
-        if dialogid == 764 then -- РґРёР°Р»РѕРі РїСЂРё Р·Р°РїСЂР°РІРєРµ РІРѕР·РґСѓС€РЅРѕРіРѕ С‚СЂР°РЅСЃРїРѕСЂС‚Р°
+        if dialogid == 764 then -- диалог при заправке воздушного транспорта
             if car.fuel ~= nil then
                 sampSendDialogResponse(dialogid, 1, nil, 100 - car.fuel)
                 return false
             end
         end
-        if dialogid == 1990 then return false end -- СЋР·Р»РµСЃСЃ РґРёР°Р»РѕРі :)
+        if dialogid == 1990 then return false end -- юзлесс диалог :)
     end
 end
 
 function sampev.onServerMessage(color, text)
-    if text:find('{0088ff}РџСЂРёРІРµС‚, {FFFFFF}.-! РЎРµРіРѕРґРЅСЏ {ffcc66}') then mainIni.config.fakenick = false mainIni.config.nametag = true end
+    if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.config.fakenick = false mainIni.config.nametag = true end
     if acc_id ~= nil then
-        if text:find('{FF0000}<< {0088ff}РђРіРµРЅС‚ в„– '..acc_id..' РІС‹РїРѕР»РЅРёР» РєРѕРЅС‚СЂР°РєС‚ РЅР° .+, Рё РїРѕР»СѓС‡РёР» {00BC12}%d+%$ {FF0000}>>') then
-            if cfd == sampGetPlayerIdByNickname(text:match('РІС‹РїРѕР»РЅРёР» РєРѕРЅС‚СЂР°РєС‚ РЅР° (.+), Рё РїРѕР»СѓС‡РёР»')) then cfd = nil end
+        if text:find('{FF0000}<< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}>>') then
+            if cfd == sampGetPlayerIdByNickname(text:match('выполнил контракт на (.+), и получил')) then cfd = nil end
         end
     end
-    if text == "{0088ff}[РђРіРµРЅС‚СЃС‚РІРѕ]: {FFFFFF}Р”РµРЅСЊРіРё РїРµСЂРµС‡РёСЃР»РµРЅС‹ РЅР° РІР°С€ Р±Р°РЅРєРѕРІСЃРєРёР№ СЃС‡С‘С‚" then
+    if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
         sampAddChatMessage(text, 0x0088FF)
         if mainIni.config.autoscreen then screenct() end
         return false
     end
-    if text:find('{8B8B8B}РђРіРµРЅС‚СЃС‚РІРѕ: {FF0000}РЅРѕРІС‹Р№ РєРѕРЅС‚СЂР°РєС‚ {8B8B8B}.+{FF0000}, СЃСѓРјРјР° {8B8B8B}%d+$ %[ /goc РїСЂРёРЅСЏС‚СЊ %]%[ /givec РїРѕСЂСѓС‡РёС‚СЊ %]') then
-        local name = text:match('РЅРѕРІС‹Р№ РєРѕРЅС‚СЂР°РєС‚ {8B8B8B}(.-){')
+    if text:find('{8B8B8B}Агентство: {FF0000}новый контракт {8B8B8B}.+{FF0000}, сумма {8B8B8B}%d+$ %[ /goc принять %]%[ /givec поручить %]') then
+        local name = text:match('новый контракт {8B8B8B}(.-){')
         if autogoc_price ~= 0 then 
-            if tonumber(text:match('СЃСѓРјРјР° {......}(%d-)%$')) >= autogoc_price then
+            if tonumber(text:match('сумма {......}(%d-)%$')) >= autogoc_price then
             sampSendChat('/goc '..sampGetPlayerIdByNickname(name))
-            sampAddChatMessage('[ РњС‹СЃР»Рё ]: РЇ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РІР·СЏР» РєРѕРЅС‚СЂР°РєС‚ РЅР° '..name..' [ РѕС‚РєР»СЋС‡РёС‚СЊ /autogoc 0 ]', 0xCCCCCC)
+            sampAddChatMessage('[ Мысли ]: Я автоматически взял контракт на '..name..' [ отключить /autogoc 0 ]', 0xCCCCCC)
             end
         end
         text = text:gsub(name, name..'['..sampGetPlayerIdByNickname(name)..']')
         return {color, text}
     end
-    --[[if text:find('%[ РњС‹СЃР»Рё %]: РЇ Р·Р°РєСЂС‹Р»Р°* СЃРІРѕС‘ Р»РёС†Рѕ {FF6347}%[ РќРёРєРЅРµР№Рј РѕС‚РєР»СЋС‡С‘РЅ %]') or text:find('%[ РњС‹СЃР»Рё %]: РЇ РѕС‚РєСЂС‹Р»Р°* СЃРІРѕС‘ Р»РёС†Рѕ {99ff66}%[ РќРёРєРЅРµР№Рј РІРєР»СЋС‡С‘РЅ %]') then end]]
-    if text == '[ РњС‹СЃР»Рё ]: РЇ РЅРµ РјРѕРіСѓ РІРёРґРµС‚СЊ СЃРїРёСЃРѕРє РїРѕС‚РµРЅС†РёР°Р»СЊРЅС‹С… Р¶РµСЂС‚РІ' then
+    --[[if text:find('%[ Мысли %]: Я закрыла* своё лицо {FF6347}%[ Никнейм отключён %]') or text:find('%[ Мысли %]: Я открыла* своё лицо {99ff66}%[ Никнейм включён %]') then end]]
+    if text == '[ Мысли ]: Я не могу видеть список потенциальных жертв' then
         return false
     end
-    if text == '[ РњС‹СЃР»Рё ]: РЇ РЅРµ РјРѕРіСѓ РёСЃРєР°С‚СЊ С‡РµР»РѕРІРµРєР°' then
+    if text == '[ Мысли ]: Я не могу искать человека' then
         return false
     end
 
@@ -1092,28 +1092,28 @@ function sampev.onServerMessage(color, text)
     end
     
     if mainIni.config.customctstr then
-        if text:find('%*%* %{......%}РђРіРµРЅС‚ в„–(%d+) %{......%}РїСЂРёРЅСЏР» РєРѕРЅС‚СЂР°РєС‚ РЅР°: %{......%}.+%[(%d+)%] %{......%}Р¦РµРЅР°: (%d+)$ %{......%}%*%*') then
-            local number, id, price = text:match('%*%* %{......%}РђРіРµРЅС‚ в„–(%d+) %{......%}РїСЂРёРЅСЏР» РєРѕРЅС‚СЂР°РєС‚ РЅР°: %{......%}.+%[(%d+)%] %{......%}Р¦РµРЅР°: (%d+)$ %{......%}%*%*')
+        if text:find('%*%* %{......%}Агент №(%d+) %{......%}принял контракт на: %{......%}.+%[(%d+)%] %{......%}Цена: (%d+)$ %{......%}%*%*') then
+            local number, id, price = text:match('%*%* %{......%}Агент №(%d+) %{......%}принял контракт на: %{......%}.+%[(%d+)%] %{......%}Цена: (%d+)$ %{......%}%*%*')
             local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
-            return {color, '{ffff00}РђРіРµРЅС‚ в„–'..number..' РїСЂРёРЅСЏР» РєРѕРЅС‚СЂР°РєС‚ РЅР°: {'..colour..'}'..sampGetPlayerNickname(id):gsub('_', ' ')..' ['..id..']{ffff00} | Р¦РµРЅР°: {008000}'..price..'$'}
+            return {color, '{ffff00}Агент №'..number..' принял контракт на: {'..colour..'}'..sampGetPlayerNickname(id):gsub('_', ' ')..' ['..id..']{ffff00} | Цена: {008000}'..price..'$'}
         end
 
-        if text:find('%{......%}В« %{......%}РђРіРµРЅС‚ в„– (%d+) РІС‹РїРѕР»РЅРёР» РєРѕРЅС‚СЂР°РєС‚ РЅР° .+, Рё РїРѕР»СѓС‡РёР» %{......%}(%d+)$ %{......%}В»') then
-            local number, nick, price = text:match('%{......%}В« %{......%}РђРіРµРЅС‚ в„– (%d+) РІС‹РїРѕР»РЅРёР» РєРѕРЅС‚СЂР°РєС‚ РЅР° (.+), Рё РїРѕР»СѓС‡РёР» %{......%}(%d+)$ %{......%}В»')
+        if text:find('%{......%}« %{......%}Агент № (%d+) выполнил контракт на .+, и получил %{......%}(%d+)$ %{......%}»') then
+            local number, nick, price = text:match('%{......%}« %{......%}Агент № (%d+) выполнил контракт на (.+), и получил %{......%}(%d+)$ %{......%}»')
             local id = sampGetPlayerIdByNickname(nick)
             local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
-            return {color, '{ffff00}РђРіРµРЅС‚ в„–'..number..' РІС‹РїРѕР»РЅРёР» РєРѕРЅС‚СЂР°РєС‚ РЅР° {'..colour..'}'..nick:gsub('_', ' ')..'{ffff00} ['..id..'] РїРѕР»СѓС‡РёРІ {008000}'..price..'$'}
+            return {color, '{ffff00}Агент №'..number..' выполнил контракт на {'..colour..'}'..nick:gsub('_', ' ')..'{ffff00} ['..id..'] получив {008000}'..price..'$'}
         end
 
-        if text:find('%{......%}%*%* %{......%}РђРіРµРЅС‚ в„–(%d+) %{......%}РѕС‚РєР°Р·С‹РІР°РµС‚СЃСЏ РІС‹РїРѕР»РЅСЏС‚СЊ РєРѕРЅС‚СЂР°РєС‚ РЅР°: %{......%}.+%[(%d+)%] %{......%}%*%*') then
-            local number, id = text:match('%{......%}%*%* %{......%}РђРіРµРЅС‚ в„–(%d+) %{......%}РѕС‚РєР°Р·С‹РІР°РµС‚СЃСЏ РІС‹РїРѕР»РЅСЏС‚СЊ РєРѕРЅС‚СЂР°РєС‚ РЅР°: %{......%}.+%[(%d+)%] %{......%}%*%*')
+        if text:find('%{......%}%*%* %{......%}Агент №(%d+) %{......%}отказывается выполнять контракт на: %{......%}.+%[(%d+)%] %{......%}%*%*') then
+            local number, id = text:match('%{......%}%*%* %{......%}Агент №(%d+) %{......%}отказывается выполнять контракт на: %{......%}.+%[(%d+)%] %{......%}%*%*')
             local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
-            return {color, '{ffff00}РђРіРµРЅС‚ в„–'..number..' РѕС‚РєР°Р·С‹РІР°РµС‚СЃСЏ РІС‹РїРѕР»РЅСЏС‚СЊ РєРѕРЅС‚СЂР°РєС‚ РЅР° {'..colour..'}'..sampGetPlayerNickname(id):gsub('_', ' ')..'{ffff00} ['..id..']'} 
+            return {color, '{ffff00}Агент №'..number..' отказывается выполнять контракт на {'..colour..'}'..sampGetPlayerNickname(id):gsub('_', ' ')..'{ffff00} ['..id..']'} 
         end
     end
 
     if not mainIni.chat.misli then
-        if text:find('%[ РњС‹СЃР»Рё %]: ') then
+        if text:find('%[ Мысли %]: ') then
             print(text)
             return false
         end
@@ -1125,7 +1125,7 @@ function sampev.onServerMessage(color, text)
         end
     end
     if not mainIni.chat.frac then
-        if text:find('%*%* %{......%}.+в„– %d+: {......}.+') or text:find('%*%* %{......%}.+ %{......%}.+%{......}%[%d+%]: .+') then
+        if text:find('%*%* %{......%}.+№ %d+: {......}.+') or text:find('%*%* %{......%}.+ %{......%}.+%{......}%[%d+%]: .+') then
             print(text)
             return false
         end
@@ -1137,19 +1137,19 @@ function sampev.onServerMessage(color, text)
         end
     end
     if not mainIni.chat.ads then
-        if text:find('%* %[.*Р РµРєР»Р°РјР°%]:%{......%}.+, %{......%}РљРѕРЅС‚Р°РєС‚: [^РќРµРёР·РІРµСЃС‚РЅС‹Р№]') or text:find('%* РћР±СЂР°Р±РѕС‚Р°Р»:{......} .+ %*') then
+        if text:find('%* %[.*Реклама%]:%{......%}.+, %{......%}Контакт: [^Неизвестный]') or text:find('%* Обработал:{......} .+ %*') then
             print(text)
             return false
         end
     end
     if not mainIni.chat.invites then
-        if (color == -86 or color == -858993494) and (text:find("%*%*%p+%{") or text:find("%[ %{00cc00%}РћС‚РєСЂС‹С‚ %{ffffff%}| %{00cc00%}/invites %{ffffff%}%]") or text:find("РћС‚РєСЂС‹С‚ РїСЂРёР·С‹РІ РІ NGSA: %[ %{333300%}РћС‚РєСЂС‹С‚ %{ffffff%}|")) then
+        if (color == -86 or color == -858993494) and (text:find("%*%*%p+%{") or text:find("%[ %{00cc00%}Открыт %{ffffff%}| %{00cc00%}/invites %{ffffff%}%]") or text:find("Открыт призыв в NGSA: %[ %{333300%}Открыт %{ffffff%}|")) then
             print(text)
             return false
         end
     end
     if not mainIni.chat.gos_ads then
-        if (color == 869072810 and text:find("РІС‹РґР°Р» РѕСЂРґРµСЂ Р°РґРІРѕРєР°С‚Сѓ") or (color == -86 or color == -858993494) and (text:find("%*%*%p+%P") or text:find("%a+_%a+:"))) then
+        if (color == 869072810 and text:find("выдал ордер адвокату") or (color == -86 or color == -858993494) and (text:find("%*%*%p+%P") or text:find("%a+_%a+:"))) then
             print(text)
             return false
         end
@@ -1161,38 +1161,38 @@ function sampev.onServerMessage(color, text)
         end
     end
     if not mainIni.chat.news_cnn then
-        if (color == -5963606 or color == -1697828182) and (text:find("%{FFFFFF%}%* CNN %* %a+_%a+:") or text:find("%[РџСЂСЏРјРѕР№ Р­С„РёСЂ%]")) then
+        if (color == -5963606 or color == -1697828182) and (text:find("%{FFFFFF%}%* CNN %* %a+_%a+:") or text:find("%[Прямой Эфир%]")) then
             print(text)
             return false
         end
     end
     if not mainIni.chat.news_sekta then
-        if color == -5963606 and text:find("%{FFFFFF%}%* CNN %* РЎРµРєС‚Р°РЅС‚:") then
+        if color == -5963606 and text:find("%{FFFFFF%}%* CNN %* Сектант:") then
             print(text)
             return false
         end
     end
     if not mainIni.chat.hit_ads then
-        if color == -1 and text:find("%{FF6C00%}%* %[Р РµРєР»Р°РјР°%]:%{00FF0C%}") or text:find("%{FF0000%}РѕС‚РїСЂР°РІРёР» СЂРµРєР»Р°РјСѓ %*%*") then
+        if color == -1 and text:find("%{FF6C00%}%* %[Реклама%]:%{00FF0C%}") or text:find("%{FF0000%}отправил рекламу %*%*") then
             print(text)
             return false
         end
     end
     if not mainIni.chat.propose then
-        if color == -86 and (text:find("%{0088ff%}___________________________________________________________________________________________________________") or text:find("%{0088ff%}%[Pears Project%]: %{aeff00%}РџРѕР·РґСЂР°РІР»СЏРµРј")) then
+        if color == -86 and (text:find("%{0088ff%}___________________________________________________________________________________________________________") or text:find("%{0088ff%}%[Pears Project%]: %{aeff00%}Поздравляем")) then
             print(text)
             return false
         end
     end
 
-    if text:find('СЃР±РёР» СЃ РЅРѕРі .+, СѓРґР°СЂРѕРј РїРѕ РіРѕР»РѕРІРµ%.') then lastknocked = sampGetPlayerIdByNickname(text:match('СЃ РЅРѕРі (.-), СѓРґР°СЂРѕРј')) end
+    if text:find('сбил с ног .+, ударом по голове%.') then lastknocked = sampGetPlayerIdByNickname(text:match('с ног (.-), ударом')) end
 end
 
 function sampev.onPlayerStreamIn(playerid, team, model, position)
     if mainIni.config.cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
-                sampAddChatMessage('[ РњС‹СЃР»Рё ]: РљРѕРЅС‚СЂР°РєС‚ {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {cccccc}[ {800000}'..k..' {cccccc}] РІ Р·РѕРЅРµ СЃС‚СЂРёРјР°. РЎС‚РѕРёРјРѕСЃС‚СЊ - {800000}'..v..'${ffffff}.', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {cccccc}[ {800000}'..k..' {cccccc}] в зоне стрима. Стоимость - {800000}'..v..'${ffffff}.', 0xCCCCCC)
                 lastct_instream = k
             end
         end
@@ -1200,7 +1200,7 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
     if mainIni.config.otstrel then
         for k, v in pairs(otstrel_online) do
             if v.id == playerid then
-                sampAddChatMessage('[ РћС‚СЃС‚СЂРµР» ]: РРіСЂРѕРє {800000}'..v.name:gsub('_', ' ')..' {cccccc}[ {800000}'..v.id..' {cccccc}] РІ Р·РѕРЅРµ СЃС‚СЂРёРјР°.', 0xCCCCCC)
+                sampAddChatMessage('[ Отстрел ]: Игрок {800000}'..v.name:gsub('_', ' ')..' {cccccc}[ {800000}'..v.id..' {cccccc}] в зоне стрима.', 0xCCCCCC)
             end
         end
     end
@@ -1210,14 +1210,14 @@ function sampev.onPlayerStreamOut(playerid)
     if mainIni.config.cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
-                sampAddChatMessage('[ РњС‹СЃР»Рё ]: РљРѕРЅС‚СЂР°РєС‚ {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {cccccc}[ {800000}'..k..' {cccccc}] РїРѕРєРёРЅСѓР» Р·РѕРЅСѓ СЃС‚СЂРёРјР°.', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {cccccc}[ {800000}'..k..' {cccccc}] покинул зону стрима.', 0xCCCCCC)
             end
         end
     end
     if mainIni.config.otstrel then
         for k, v in pairs(otstrel_online) do
             if v.id == playerid then
-                sampAddChatMessage('[ РћС‚СЃС‚СЂРµР» ]: РРіСЂРѕРє {800000}'..v.name:gsub('_', ' ')..' {cccccc}[ {800000}'..v.id..' {cccccc}] РїРѕРєРёРЅСѓР» Р·РѕРЅСѓ СЃС‚СЂРёРјР°.', 0xCCCCCC)
+                sampAddChatMessage('[ Отстрел ]: Игрок {800000}'..v.name:gsub('_', ' ')..' {cccccc}[ {800000}'..v.id..' {cccccc}] покинул зону стрима.', 0xCCCCCC)
             end
         end
     end
@@ -1273,7 +1273,7 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}РќР°СЃС‚СЂРѕР№РєР° {cccccc}Hitman Helper {ffffff}| Р’РµСЂСЃРёСЏ: '..text_version, 'РќР°Р·РІР°РЅРёРµ\tР—РЅР°С‡РµРЅРёРµ\n{cccccc}РџРѕСЃР»РµРґРЅРёРµ РЅРѕРІРѕРІРІРµРґРµРЅРёСЏ\t'..'Р’РµСЂСЃРёСЏ: '..text_version..'\n{ffffff}РђРІС‚Рѕ-СЃРєСЂРёРЅС€РѕС‚ РІС‹РїРѕР»РЅРµРЅРЅРѕРіРѕ РєРѕРЅС‚СЂР°РєС‚Р°\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}РљРѕРЅС‚СЂР°РєС‚С‹ РІ Р·РѕРЅРµ СЃС‚СЂРёРјР°\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}РњРµС‚РєР° РЅР° РіРѕР»РѕРІРµ РёРіСЂРѕРєР°, Р·Р°РЅРµСЃРµРЅРЅРѕРіРѕ РІ CFD\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\n{ffffff}РЎРєСЂС‹РІР°С‚СЊ РїСЂРё СЃРєСЂРёРЅС€РѕС‚Рµ\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Р§РµРєРµСЂ РѕС‚СЃС‚СЂРµР»Р°\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-С‡Р°С‚ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}РџРѕРёСЃРє РёРіСЂРѕРєР°, Р·Р°РЅРµСЃРµРЅРЅРѕРіРѕ РІ CFD, РЅР° СЃС‚РѕСЂРѕРЅРЅРёС… СЃРµСЂРІРµСЂР°С…\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nРљР°СЃС‚РѕРјРЅС‹Р№ С…СѓРґ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nРР·РјРµРЅРµРЅРЅС‹Рµ СЃС‚СЂРѕРєРё Рѕ РІР·СЏС‚РёРё/РѕС‚РєР°Р·Рµ/РІС‹РїРѕР»РЅРµРЅРёРё РєРѕРЅС‚СЂР°РєС‚Р°\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nРђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РїРѕРїРѕР»РЅРµРЅРёРµ СЃС‡С‘С‚Р° С‚РµР»РµС„РѕРЅР°\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nРђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ Р·Р°РїСЂР°РІРєР°\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nРљР°СЃС‚РѕРјРЅС‹Р№ [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nРЎРєСЂС‹РІР°С‚СЊ СЃРµСЂРІРµСЂРЅС‹Р№ СЃРїРёРґРѕРјРµС‚СЂ\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nРќР°СЃС‚СЂРѕР№РєР° С‡Р°С‚Р°\nРќР°СЃС‚СЂРѕР№РєР° Р°РЅРѕРЅРёРјР°Р№Р·РµСЂР°\nРќР°СЃС‚СЂРѕР№РєР° РЅР°Р·РІР°РЅРёР№ РѕСЂСѓР¶РёР№\nРќР°СЃС‚СЂРѕР№РєР° РїРѕР»РѕР¶РµРЅРёСЏ HUD\nРќР°СЃС‚СЂРѕР№РєР° РјР°РєСЂРѕСЃРѕРІ\nРўРµСЃС‚ Р°РІС‚Рѕ-СЃРєСЂРёРЅС€РѕС‚Р°', 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Контракты в зоне стрима\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на голове игрока, занесенного в CFD\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока, занесенного в CFD, на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function macrossesFunc()
@@ -1398,14 +1398,14 @@ function dialogFunc()
                     end
                 end
             end
-            sampAddChatMessage('[ РњС‹СЃР»Рё ]: РЇ '..(mainIni.config.anonymizer and 'РІРєР»СЋС‡РёР»' or 'РІС‹РєР»СЋС‡РёР»')..' Р°РЅРѕРЅРёРјР°Р№Р·РµСЂ', 0xCCCCCC)
+            sampAddChatMessage('[ Мысли ]: Я '..(mainIni.config.anonymizer and 'включил' or 'выключил')..' анонимайзер', 0xCCCCCC)
         end
         if listitem == 1 then
-            sampShowDialog(D_ASETTING_TWO, 'Р”РѕР±Р°РІР»РµРЅРёРµ/СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РјР°СЃРєРё', 'Р’РІРµРґРёС‚Рµ РЅРёРє РёРіСЂРѕРєР° Рё РјР°СЃРєСѓ РґР»СЏ РЅРµРіРѕ\n{cccccc}РўСЂРµР±СѓРµРјС‹Р№ С„РѕСЂРјР°С‚:{cccccc} Nick_Name = Mask', 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_INPUT)
+            sampShowDialog(D_ASETTING_TWO, 'Добавление/редактирование маски', 'Введите ник игрока и маску для него\n{cccccc}Требуемый формат:{cccccc} Nick_Name = Mask', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
             openMenu = false
         end
         if listitem == 2 then
-            sampShowDialog(D_ASETTING_THREE, 'РЈРґР°Р»РµРЅРёРµ РјР°СЃРєРё', 'Р’РІРµРґРёС‚Рµ С‡Р°СЃС‚СЊ РЅРёРєР°, РёР»Рё С‡Р°СЃС‚СЊ РјР°СЃРєРё, РґР»СЏ С‚РѕРіРѕ, С‡С‚РѕР±С‹ СѓРґР°Р»РёС‚СЊ Р·Р°РїРёСЃСЊ:', 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_INPUT)
+            sampShowDialog(D_ASETTING_THREE, 'Удаление маски', 'Введите часть ника, или часть маски, для того, чтобы удалить запись:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
             openMenu = false
         end
         if openMenu then anonymizerSettings() end
@@ -1414,8 +1414,8 @@ function dialogFunc()
     local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_TWO)
     if result and button == 1 then
         if not input:find('.+ = .+') then
-            sampAddChatMessage('[ РњС‹СЃР»Рё ]: РЇ РґРѕР»Р¶РµРЅ РІРІРµСЃС‚Рё РЅРёРє Рё РјР°СЃРєСѓ РІ С‚СЂРµР±СѓРµРјРѕРј С„РѕСЂРјР°С‚Рµ: Nick_Name = Mask', 0xCCCCCC)
-            sampShowDialog(D_ASETTING_TWO, 'Р”РѕР±Р°РІР»РµРЅРёРµ/СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РјР°СЃРєРё', 'Р’РІРµРґРёС‚Рµ РЅРёРє РёРіСЂРѕРєР° Рё РјР°СЃРєСѓ РґР»СЏ РЅРµРіРѕ\n{ff0000}РўСЂРµР±СѓРµРјС‹Р№ С„РѕСЂРјР°С‚:{cccccc} Nick_Name = Mask', 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_INPUT)
+            sampAddChatMessage('[ Мысли ]: Я должен ввести ник и маску в требуемом формате: Nick_Name = Mask', 0xCCCCCC)
+            sampShowDialog(D_ASETTING_TWO, 'Добавление/редактирование маски', 'Введите ник игрока и маску для него\n{ff0000}Требуемый формат:{cccccc} Nick_Name = Mask', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
         else
             local retry
             for k, v in pairs(anonymizer_names) do
@@ -1426,7 +1426,7 @@ function dialogFunc()
             end
             if not retry then
                 table.insert(anonymizer_names, input)
-                sampAddChatMessage('[ РњС‹СЃР»Рё ]: Р—Р°РїРёСЃСЊ "'..input..'" СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅР°', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Запись "'..input..'" успешно создана', 0xCCCCCC)
                 if mainIni.config.anonymizer then
                     local name = input:match('(.+) =')
                     local mask = input:match('= (.+)')
@@ -1436,7 +1436,7 @@ function dialogFunc()
                     end
                 end
             else
-                sampAddChatMessage('[ РњС‹СЃР»Рё ]: РќРёРєРЅРµР№РјС‹ Рё РјР°СЃРєРё РЅРµ РґРѕР»Р¶РЅС‹ РїРѕРІС‚РѕСЂСЏС‚СЊСЃСЏ. РЎРїРµСЂРІР° СЏ РґРѕР»Р¶РµРЅ СѓРґР°Р»РёС‚СЊ СЃС‚Р°СЂСѓСЋ Р·Р°РїРёСЃСЊ', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Никнеймы и маски не должны повторяться. Сперва я должен удалить старую запись', 0xCCCCCC)
             end
         end
     end
@@ -1452,14 +1452,14 @@ function dialogFunc()
             end
         end
         if delete ~= nil then
-            sampAddChatMessage('[ РњС‹СЃР»Рё ]: Р—Р°РїРёСЃСЊ "'..delete..'" СѓСЃРїРµС€РЅРѕ СѓРґР°Р»РµРЅР°', 0xCCCCCC)
+            sampAddChatMessage('[ Мысли ]: Запись "'..delete..'" успешно удалена', 0xCCCCCC)
             local name = delete:match('(.+) =')
             local mask = delete:match('= (.+)')
             if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampGetPlayerIdByNickname(mask) ~= -1 then
                 changeName(mask, name)
             end
         else
-            sampAddChatMessage('[ РњС‹СЃР»Рё ]: Р—Р°РїРёСЃСЊ РїРѕ Р·Р°РїСЂРѕСЃСѓ "'..input..'" РЅРµ РѕР±РЅР°СЂСѓР¶РµРЅР°', 0xCCCCCC)
+            sampAddChatMessage('[ Мысли ]: Запись по запросу "'..input..'" не обнаружена', 0xCCCCCC)
         end
     end
 
@@ -1495,7 +1495,7 @@ function dialogFunc()
         if button == 1 then
             local openMenu = true
             if listitem == 0 then
-                sampShowDialog(D_INVALID, 'РџРѕСЃР»РµРґРЅРёРµ РЅРѕРІРѕРІРІРµРґРµРЅРёСЏ || Р’РµСЂСЃРёСЏ: '..text_version, changelog, '*', nil, DIALOG_STYLE_MSGBOX)
+                sampShowDialog(D_INVALID, 'Последние нововведения || Версия: '..text_version, changelog, '*', nil, DIALOG_STYLE_MSGBOX)
                 openMenu = false
             end
             if listitem == 1 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
@@ -1510,14 +1510,14 @@ function dialogFunc()
                     f:close()
                 end
                 if mainIni.config.otstrel then
-                    sampAddChatMessage('[ Hitman Helper ]: Р’С‹ РІРєР»СЋС‡РёР»Рё С‡РµРєРµСЂ РѕС‚СЃС‚СЂРµР»Р°. РќРёРєРЅРµР№РјС‹ Р»СЋРґРµР№ РёР· СЃРїРёСЃРєР° РѕС‚СЃС‚СЂРµР»Р° Р±С‹Р»Рё Р·Р°РіСЂСѓР¶РµРЅС‹ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.', 0xCCCCCC)
-                    sampAddChatMessage('[ Hitman Helper ]: Р”Р»СЏ РїСЂРѕСЃРјРѕС‚СЂР° Р»СЋРґРµР№ РёР· СЃРїРёСЃРєР° РѕС‚СЃС‚СЂРµР»Р° РІ СЃРµС‚Рё, РёСЃРїРѕР»СЊР·СѓР№С‚Рµ - {FF6347}/otstrel_list [ '..layoutMacrossString(macrosses_list.otstrel)..' ]', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: Вы включили чекер отстрела. Никнеймы людей из списка отстрела были загружены автоматически.', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: Для просмотра людей из списка отстрела в сети, используйте - {FF6347}/otstrel_list [ '..layoutMacrossString(macrosses_list.otstrel)..' ]', 0xCCCCCC)
                     loadOtstrelList()
                 end
             end
             if listitem == 6 then 
 				mainIni.config.ooc_only = not mainIni.config.ooc_only
-				if mainIni.config.ooc_only then sampAddChatMessage('Р’С‹ РІРєР»СЋС‡РёР»Рё OOC-С‡Р°С‚ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ. Р”Р»СЏ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ IC С‡Р°С‚Р°, РІРІРµРґРёС‚Рµ ">" РїРµСЂРµРґ СЃРѕРѕР±С‰РµРЅРёРµРј.', 0xCCCCCC) end
+				if mainIni.config.ooc_only then sampAddChatMessage('Вы включили OOC-чат по умолчанию. Для использования IC чата, введите ">" перед сообщением.', 0xCCCCCC) end
 			end
             if listitem == 7 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
             if listitem == 8 then mainIni.config.hud = not mainIni.config.hud end
@@ -1537,14 +1537,14 @@ function dialogFunc()
             if listitem == 16 then
                 local weapon_line
                 for k, v in pairs(weapons_list) do
-                    weapon_line = (weapon_line == nil and 'РўРµРєСѓС‰РµРµ РЅР°Р·РІР°РЅРёРµ РѕСЂСѓР¶РёСЏ\tРќРѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ\n'..v..'\t>>\n' or weapon_line..v..'\t>>\n')
+                    weapon_line = (weapon_line == nil and 'Текущее название оружия\tНовое значение\n'..v..'\t>>\n' or weapon_line..v..'\t>>\n')
                 end
-                sampShowDialog(D_GSETTING_ONE, 'РќР°СЃС‚СЂРѕР№РєР°', weapon_line, 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_TABLIST_HEADERS)
+                sampShowDialog(D_GSETTING_ONE, 'Настройка', weapon_line, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
                 openMenu = false
             end
             if listitem == 17 then
-                sampAddChatMessage('[ Hitman Helper ]: РџРµСЂРµРјРµС‰Р°Р№С‚Рµ РєСѓСЂСЃРѕСЂ РґР»СЏ СѓСЃС‚Р°РЅРѕРІРєРё РЅРѕРІРѕРіРѕ РїРѕР»РѕР¶РµРЅРёСЏ РєР°СЃС‚РѕРјРЅРѕРіРѕ С…СѓРґР°', 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: Р›РљРњ - СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РЅРѕРІРѕРµ РїРѕР»РѕР¶РµРЅРёРµ | РџРљРњ - РІРµСЂРЅСѓС‚СЊ РёР·РЅР°С‡Р°Р»СЊРЅРѕРµ РїРѕР»РѕР¶РµРЅРёРµ', 0xCCCCCC)
+                sampAddChatMessage('[ Hitman Helper ]: Перемещайте курсор для установки нового положения кастомного худа', 0xCCCCCC)
+                sampAddChatMessage('[ Hitman Helper ]: ЛКМ - установить новое положение | ПКМ - вернуть изначальное положение', 0xCCCCCC)
                 hud_move = true
                 openMenu = false
             end
@@ -1553,9 +1553,9 @@ function dialogFunc()
                 openMenu = false
             end
             if listitem == 19 then
-                sampAddChatMessage('[ Hitman Helper ]: РџРѕСЃР»Рµ РІС‹РїРѕР»РЅРµРЅРЅРѕРіРѕ РєРѕРЅС‚СЂР°РєС‚Р° СЃРєСЂРёРїС‚ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РЅР°Р¶РёРјР°РµС‚ СЃРѕС‡РµС‚Р°РЅРёРµ РєР»Р°РІРёС€ [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: Р’Р°Рј РЅРµРѕР±С…РѕРґРёРјРѕ РІС‹Р±СЂР°С‚СЊ СЌС‚Рѕ СЃРѕС‡РµС‚Р°РЅРёРµ РєР»Р°РІРёС€ РІ Р»СЋР±РѕР№ РїСЂРѕРіСЂР°РјРјРµ РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ СЃРєСЂРёРЅС€РѕС‚РѕРІ', 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: РќР°Р¶РјРёС‚Рµ F4, С‡С‚РѕР±С‹ СЃРєСЂРёРїС‚ РЅР°Р¶Р°Р» РґР°РЅРЅРѕРµ СЃРѕС‡РµС‚Р°РЅРёРµ РєР»Р°РІРёС€, Р»РёР±Рѕ F5, С‡С‚РѕР±С‹ РІС‹Р№С‚Рё РёР· СЌС‚РѕРіРѕ СЂРµР¶РёРјР°', 0xCCCCCC)
+                sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
+                sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
+                sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
                 test_as = true
                 openMenu = false
             end
@@ -1572,12 +1572,12 @@ function dialogFunc()
         else
             gun = weapons_list[listitem + 3]
         end
-        sampShowDialog(D_GSETTING_TWO, 'РќР°СЃС‚СЂРѕР№РєР°', 'Р’РІРµРґРёС‚Рµ РЅРѕРІРѕРµ РЅР°Р·РІР°РЅРёРµ РґР»СЏ '..gun, 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_INPUT)
+        sampShowDialog(D_GSETTING_TWO, 'Настройка', 'Введите новое название для '..gun, 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
     end
 
     local result, button, listitem, input = sampHasDialogRespond(D_GSETTING_TWO)
     if result and button == 1 then
-        local weapon_name = sampGetDialogText():match('РЅР°Р·РІР°РЅРёРµ РґР»СЏ (.+)')
+        local weapon_name = sampGetDialogText():match('название для (.+)')
         local weapon_id
         for k, v in pairs(weapons_list) do
             if weapon_name == v then
@@ -1586,13 +1586,13 @@ function dialogFunc()
             end
         end
         weapons_list[weapon_id] = input
-        sampAddChatMessage('[ РњС‹СЃР»Рё ]: РќР°Р·РІР°РЅРёРµ РѕСЂСѓР¶РёСЏ СѓСЃРїРµС€РЅРѕ РёР·РјРµРЅРµРЅРѕ РЅР° "'..input..'"', 0xCCCCCC)
+        sampAddChatMessage('[ Мысли ]: Название оружия успешно изменено на "'..input..'"', 0xCCCCCC)
     end
 
     local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_ONE)
     if result and button == 1 then
         current_tempname = (listitem == 0 and 'otstrel' or (listitem == 1 and 'contracts' or 'trainings'))
-        sampShowDialog(D_TNSETTING_TWO, 'Р’Р·Р°РёРјРѕРґРµР№СЃС‚РІРёРµ', 'РЈСЃС‚Р°РЅРѕРІРёС‚СЊ\nР РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ', 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_LIST)
+        sampShowDialog(D_TNSETTING_TWO, 'Взаимодействие', 'Установить\nРедактировать', 'Ок', 'Отмена', DIALOG_STYLE_LIST)
     end
 
     local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_TWO)
@@ -1600,27 +1600,27 @@ function dialogFunc()
         if listitem == 0 then
             sampSendChat('/sign '..mainIni['tempname'][current_tempname])
         elseif listitem == 1 then
-            sampShowDialog(D_TNSETTING_THREE, 'Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ', '{FFFFFF}Р’РІРµРґРёС‚Рµ Р¶РµР»Р°РµРјС‹Р№ РЅРёРєРЅРµР№Рј:', 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_INPUT)
+            sampShowDialog(D_TNSETTING_THREE, 'Редактирование', '{FFFFFF}Введите желаемый никнейм:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
         end
     end
 
     local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_THREE)
     if result and button == 1 then
         mainIni['tempname'][current_tempname] = input
-        sampAddChatMessage('[ Hitman Helper ]: РќРѕРІС‹Р№ РЅРёРєРЅРµР№Рј СѓСЃС‚Р°РЅРѕРІР»РµРЅ: '..input, 0xCCCCCC)
-        sampShowDialog(D_TNSETTING_ONE, ' ', 'РўРёРї\tР’СЂРµРјРµРЅРЅС‹Р№ РЅРёРєРЅРµР№Рј\n{FF6347}РћС‚СЃС‚СЂРµР»\t{FFFFFF}'..mainIni.tempname.otstrel..'\n{FF6347}РљРѕРЅС‚СЂР°РєС‚С‹\t{FFFFFF}'..mainIni.tempname.contracts..'\n{FF6347}РўСЂРµРЅРёСЂРѕРІРєРё\t{FFFFFF}'..mainIni.tempname.trainings, 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_TABLIST_HEADERS)
+        sampAddChatMessage('[ Hitman Helper ]: Новый никнейм установлен: '..input, 0xCCCCCC)
+        sampShowDialog(D_TNSETTING_ONE, ' ', 'Тип\tВременный никнейм\n{FF6347}Отстрел\t{FFFFFF}'..mainIni.tempname.otstrel..'\n{FF6347}Контракты\t{FFFFFF}'..mainIni.tempname.contracts..'\n{FF6347}Тренировки\t{FFFFFF}'..mainIni.tempname.trainings, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
     end
 
 end
 
 function chatSettings()
-    sampShowDialog(D_CSETTING, 'РќР°СЃС‚СЂРѕР№РєР° С‡Р°С‚Р°', 'РўРёРї\tР—РЅР°С‡РµРЅРёРµ\nРњС‹СЃР»Рё РїРµСЂСЃРѕРЅР°Р¶Р°\t'..(mainIni.chat.misli and '{008000}V' or '{ff0000}X')..'\nРќР°РєР°Р·Р°РЅРёСЏ РѕС‚ Р°РґРјРёРЅРёСЃС‚СЂР°С†РёРё\t'..(mainIni.chat.p_adm and '{008000}V' or '{ff0000}X')..'\nР§Р°С‚ РѕСЂРіР°РЅРёР·Р°С†РёРё [/f]\t'..(mainIni.chat.frac and '{008000}V' or '{ff0000}X')..'\nР§Р°С‚ СЃРµРјСЊРё [/c]\t'..(mainIni.chat.fam and '{008000}V' or '{ff0000}X')..'\nРћР±СЉСЏРІР»РµРЅРёСЏ РёРіСЂРѕРєРѕРІ\t'..(mainIni.chat.ads and '{008000}V' or '{ff0000}X')..'\nРћРїРѕРІРµС‰РµРЅРёСЏ Рѕ РЅР°Р±РѕСЂР°С…\t'..(mainIni.chat.invites and '{008000}V' or '{ff0000}X')..'\nР“РѕСЃСѓРґР°СЂСЃС‚РІРµРЅРЅС‹Рµ РѕР±СЉСЏРІР»РµРЅРёСЏ\t'..(mainIni.chat.gos_ads and '{008000}V' or '{ff0000}X')..'\nРЎРѕРѕР±С‰РµРЅРёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С†РёРё\t'..(mainIni.chat.a_adm and '{008000}V' or '{ff0000}X')..'\nРќРѕРІРѕСЃС‚Рё РѕС‚ CNN\t'..(mainIni.chat.news_cnn and '{008000}V' or '{ff0000}X')..'\nРќРѕРІРѕСЃС‚Рё РѕС‚ РЎРµРєС‚С‹\t'..(mainIni.chat.news_sekta and '{008000}V' or '{ff0000}X')..'\nР РµРєР»Р°РјР° Р°РіРµРЅС‚СЃС‚РІР°\t'..(mainIni.chat.hit_ads and '{008000}V' or '{ff0000}X')..'\nРћРїРѕРІРµС‰РµРЅРёСЏ Рѕ СЃРІР°РґСЊР±Р°С…\t'..(mainIni.chat.propose and '{008000}V' or '{ff0000}X'), 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_CSETTING, 'Настройка чата', 'Тип\tЗначение\nМысли персонажа\t'..(mainIni.chat.misli and '{008000}V' or '{ff0000}X')..'\nНаказания от администрации\t'..(mainIni.chat.p_adm and '{008000}V' or '{ff0000}X')..'\nЧат организации [/f]\t'..(mainIni.chat.frac and '{008000}V' or '{ff0000}X')..'\nЧат семьи [/c]\t'..(mainIni.chat.fam and '{008000}V' or '{ff0000}X')..'\nОбъявления игроков\t'..(mainIni.chat.ads and '{008000}V' or '{ff0000}X')..'\nОповещения о наборах\t'..(mainIni.chat.invites and '{008000}V' or '{ff0000}X')..'\nГосударственные объявления\t'..(mainIni.chat.gos_ads and '{008000}V' or '{ff0000}X')..'\nСообщения администрации\t'..(mainIni.chat.a_adm and '{008000}V' or '{ff0000}X')..'\nНовости от CNN\t'..(mainIni.chat.news_cnn and '{008000}V' or '{ff0000}X')..'\nНовости от Секты\t'..(mainIni.chat.news_sekta and '{008000}V' or '{ff0000}X')..'\nРеклама агентства\t'..(mainIni.chat.hit_ads and '{008000}V' or '{ff0000}X')..'\nОповещения о свадьбах\t'..(mainIni.chat.propose and '{008000}V' or '{ff0000}X'), 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function anonymizerSettings()
     local names
     for k, v in pairs(anonymizer_names) do names = (names == nil and v..'\n' or names..v..'\n') end
-    sampShowDialog(D_ASETTING_ONE, 'РќР°СЃС‚СЂРѕР№РєР° Р°РЅРѕРЅРёРјР°Р№Р·РµСЂР°', 'РќР°Р·РІР°РЅРёРµ\tР—РЅР°С‡РµРЅРёРµ\nР’РєР»СЋС‡РёС‚СЊ/РІС‹РєР»СЋС‡РёС‚СЊ\t'..(mainIni.config.anonymizer and '{008000}V' or '{ff0000}X')..'\n{cccccc}Р”РѕР±Р°РІРёС‚СЊ/СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ\n{cccccc}РЈРґР°Р»РёС‚СЊ\n'..(names ~= nil and names or ''), 'РћРє', 'РћС‚РјРµРЅР°', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_ASETTING_ONE, 'Настройка анонимайзера', 'Название\tЗначение\nВключить/выключить\t'..(mainIni.config.anonymizer and '{008000}V' or '{ff0000}X')..'\n{cccccc}Добавить/редактировать\n{cccccc}Удалить\n'..(names ~= nil and names or ''), 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function screenct()
@@ -1662,12 +1662,12 @@ function scriptBody()
             renderFontDrawText(font_hud, weaponline, mainIni.hud.xpos + 355 - renderGetFontDrawTextLength(font_hud, weaponline), mainIni.hud.ypos + 3, 4294967295.0)
         elseif thispp and isCharInAnyCar(PLAYER_PED) and PLAYER_PED == getDriverOfCar(storeCarCharIsInNoSave(PLAYER_PED)) then
             renderFontDrawText(font_hud, money_string, mainIni.hud.xpos + 2, mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.sport and "S" or "вЂў", mainIni.hud.xpos + 349 - renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.lock and "D" or "вЂў", mainIni.hud.xpos + 343 - 2 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.light and "L" or "вЂў", mainIni.hud.xpos + 337 - 3 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.engine and "E" or "вЂў", mainIni.hud.xpos + 331 - 4 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, "вЂ”", mainIni.hud.xpos + 281, mainIni.hud.ypos + 2, 2868903935.0)
-            renderFontDrawText(font_hud, "вЂ”", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string), mainIni.hud.ypos + 2, 2868903935.0)
+            renderFontDrawText(font_hud, car.sport and "S" or "•", mainIni.hud.xpos + 349 - renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
+            renderFontDrawText(font_hud, car.lock and "D" or "•", mainIni.hud.xpos + 343 - 2 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
+            renderFontDrawText(font_hud, car.light and "L" or "•", mainIni.hud.xpos + 337 - 3 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
+            renderFontDrawText(font_hud, car.engine and "E" or "•", mainIni.hud.xpos + 331 - 4 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
+            renderFontDrawText(font_hud, "—", mainIni.hud.xpos + 281, mainIni.hud.ypos + 2, 2868903935.0)
+            renderFontDrawText(font_hud, "—", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string), mainIni.hud.ypos + 2, 2868903935.0)
             renderFontDrawText(font_hud, car.speed .. " km/h", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20, mainIni.hud.ypos + 2, 4294967295.0)
             renderFontDrawText(font_hud, car.fuel .. " l", mainIni.hud.xpos + 270 - renderGetFontDrawTextLength(font_hud, car.fuel .. " l"), mainIni.hud.ypos + 2, 4294967295.0)
             renderFontDrawText(font_hud, car.health .. " HP", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20 + renderGetFontDrawTextLength(font_hud, car.speed .. " mh/h") + (mainIni.hud.xpos + 270 - renderGetFontDrawTextLength(font_hud, car.fuel .. " l") - (mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20 + renderGetFontDrawTextLength(font_hud, car.speed .. " mh/h"))) / 2 - renderGetFontDrawTextLength(font_hud, car.health .. " HP") / 2, mainIni.hud.ypos + 2, 4294967295.0)
@@ -1718,7 +1718,7 @@ function scriptBody()
 
         if not sampIsPlayerConnected(cfd) then
             cfd = nil
-            sampAddChatMessage('[ РњС‹СЃР»Рё ]: РџСЂРµСЃР»РµРґРѕРІР°РЅРёРµ РїСЂРµРєСЂР°С‰РµРЅРѕ.', 0xCCCCCC)
+            sampAddChatMessage('[ Мысли ]: Преследование прекращено.', 0xCCCCCC)
         end
     end
 
