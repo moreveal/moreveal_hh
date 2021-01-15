@@ -63,7 +63,7 @@ local D_TNSETTING_ONE = 5121 -- диалог для выбора временного никнейма (1)
 local D_TNSETTING_TWO = 5122 -- диалог для выбора временного никнейма (2)
 local D_TNSETTING_THREE = 5123 -- диалог для выбора временного никнейма (3)
 
-local script_version = 33 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 34 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.4' -- версия для вывода в окне настроек, не изменять
 
@@ -437,7 +437,7 @@ function openOtstrelList()
                 for k, v in pairs(otstrel_list) do
                     if v.name == name then
                         if v.time ~= nil then
-                            local cooldown = os.clock() - v.time >= 600
+                            local cooldown = os.time() - v.time >= 600
                             if cooldown then 
                                 for s, t in pairs(mainIni.otstrel_list) do
                                     if s == v.name then
@@ -647,7 +647,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
                     if playerid == cfd then cfd = nil end
                     for s, t in pairs(otstrel_list) do
                         if t.name == sampGetPlayerNickname(playerid) then
-                            t.time = os.clock()
+                            t.time = os.time()
                             break
                         end
                     end
