@@ -63,12 +63,9 @@ local D_TNSETTING_ONE = 5121 -- диалог для выбора временного никнейма (1)
 local D_TNSETTING_TWO = 5122 -- диалог для выбора временного никнейма (2)
 local D_TNSETTING_THREE = 5123 -- диалог для выбора временного никнейма (3)
 
-local script_version = 34 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 35 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.4' -- версия для вывода в окне настроек, не изменять
-
-local openStats = false
-local openContractas = false
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
 
@@ -228,9 +225,7 @@ function main()
         thispp = true
     end
 
-    for k, v in pairs(mainIni['weapons']) do
-        weapons_list[k] = v
-    end
+    for k, v in pairs(mainIni['weapons']) do weapons_list[k] = v end
 
     for k, v in pairs(mainIni.macrosses) do
         macrosses_list[k] = {}
@@ -274,7 +269,7 @@ function main()
     if not update then
         sampAddChatMessage('[ Hitman Helper ]: Привет, '..sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))):gsub('_', ' ')..', для открытия настроек скрипта нажми [ '.. layoutMacrossString('setting')..' ]', 0xCCCCCC)
     end
-    if mainIni.config.otstrel then loadOtstrelList() end
+    if mainIni.config.otstrel then loadOtstrelList(1) end
 
     id = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
     if thispp then
@@ -481,7 +476,7 @@ function sampGetNearestPlayer()
 	return -1
 end
 
-function loadOtstrelList()
+function loadOtstrelList(type)
     --[[local f = io.open(otstrel_path, 'r+')
     if f == nil then
         f = io.open(otstrel_path, 'w') 
@@ -509,21 +504,23 @@ function loadOtstrelList()
     local response = requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/otstrel_list')
     for name in response.text:gmatch('[^\r\n]+') do table.insert(otstrel_list, {name = name}) end
 
-    local count = 0
-    for k, v in pairs(otstrel_list) do
-        for s, t in pairs(mainIni.otstrel_list) do 
-            if s == v.name then 
-                v.time = t
-                break 
+    if type == 1 then
+        local count = 0
+        for k, v in pairs(otstrel_list) do
+            for s, t in pairs(mainIni.otstrel_list) do 
+                if s == v.name then 
+                    v.time = t
+                    break 
+                end 
             end 
-        end 
 
-        local id = sampGetPlayerIdByNickname(v.name)
-        if id ~= -1 then
-            count = count + 1
+            local id = sampGetPlayerIdByNickname(v.name)
+            if id ~= -1 then
+                count = count + 1
+            end
         end
+        sampAddChatMessage('[ Отстрел ]: В сети найдено '..count..' человек из списка.', 0xCCCCCC)
     end
-    sampAddChatMessage('[ Отстрел ]: В сети найдено '..count..' человек из списка.', 0xCCCCCC)
 end
 
 function isKeysDown(key, state)
@@ -583,6 +580,7 @@ function sampev.onPlayerJoin(playerid, color, isnpc, nick)
                     end 
                 end
                 sampAddChatMessage('[ Отстрел ]: '..nick..' ['..playerid..'] зашел на сервер.', 0xCCCCCC)
+                table.insert(otstrel_online, {id = playerid, name = nick})
                 break
             end
         end
@@ -609,6 +607,7 @@ function sampev.onPlayerQuit(playerid, reason)
                     end
                 end
                 sampAddChatMessage('[ Отстрел ]: '..sampGetPlayerNickname(playerid)..' ['..playerid..'] покинул сервер.', 0xCCCCCC)
+                otstrel_online[k] = nil
                 break
             end
         end
@@ -639,17 +638,16 @@ end
 
 function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     if mainIni.config.otstrel then
-        for k, v in pairs(otstrel_online) do
-            if playerid == v.id then
+        for k, v in pairs(otstrel_list) do
+            local id = sampGetPlayerIdByNickname(v.name)
+            if playerid == id then
                 if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
                     sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)], 0xCCCCCC)
                     if mainIni.config.autoscreen then screenct() end
                     if playerid == cfd then cfd = nil end
-                    for s, t in pairs(otstrel_list) do
-                        if t.name == sampGetPlayerNickname(playerid) then
-                            t.time = os.time()
-                            break
-                        end
+                    if v.name == sampGetPlayerNickname(playerid) then
+                        v.time = os.time()
+                        break
                     end
                 end
                 break
@@ -1189,7 +1187,7 @@ function sampev.onServerMessage(color, text)
 end
 
 function sampev.onPlayerStreamIn(playerid, team, model, position)
-    if mainIni.config.cstream then
+    --[[if mainIni.config.cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
                 sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {cccccc}[ {800000}'..k..' {cccccc}] в зоне стрима. Стоимость - {800000}'..v..'${ffffff}.', 0xCCCCCC)
@@ -1203,11 +1201,11 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
                 sampAddChatMessage('[ Отстрел ]: Игрок {800000}'..v.name:gsub('_', ' ')..' {cccccc}[ {800000}'..v.id..' {cccccc}] в зоне стрима.', 0xCCCCCC)
             end
         end
-    end
+    end]]
 end
 
 function sampev.onPlayerStreamOut(playerid)
-    if mainIni.config.cstream then
+    --[[if mainIni.config.cstream then
         for k, v in pairs(c_ids) do
             if k == playerid then
                 sampAddChatMessage('[ Мысли ]: Контракт {800000}'..sampGetPlayerNickname(k):gsub('_', ' ')..' {cccccc}[ {800000}'..k..' {cccccc}] покинул зону стрима.', 0xCCCCCC)
@@ -1220,7 +1218,7 @@ function sampev.onPlayerStreamOut(playerid)
                 sampAddChatMessage('[ Отстрел ]: Игрок {800000}'..v.name:gsub('_', ' ')..' {cccccc}[ {800000}'..v.id..' {cccccc}] покинул зону стрима.', 0xCCCCCC)
             end
         end
-    end
+    end]]
 end
 
 function sampev.onPlaySound(id)
@@ -1504,7 +1502,6 @@ function dialogFunc()
             if listitem == 4 then mainIni.config.without_screen = not mainIni.config.without_screen end
             if listitem == 5 then
                 mainIni.config.otstrel = not mainIni.config.otstrel
-                time_otstrel = os.clock()
                 if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
                     local f = io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'w')
                     f:close()
@@ -1512,7 +1509,7 @@ function dialogFunc()
                 if mainIni.config.otstrel then
                     sampAddChatMessage('[ Hitman Helper ]: Вы включили чекер отстрела. Никнеймы людей из списка отстрела были загружены автоматически.', 0xCCCCCC)
                     sampAddChatMessage('[ Hitman Helper ]: Для просмотра людей из списка отстрела в сети, используйте - {FF6347}/otstrel_list [ '..layoutMacrossString(macrosses_list.otstrel)..' ]', 0xCCCCCC)
-                    loadOtstrelList()
+                    loadOtstrelList(1)
                 end
             end
             if listitem == 6 then 
@@ -1674,6 +1671,91 @@ function scriptBody()
         else
             renderFontDrawText(font_hud, money_string, mainIni.hud.xpos + 180 - renderGetFontDrawTextLength(font_hud, money_string) / 2, mainIni.hud.ypos + 3, 4294967295.0)
         end
+
+        if cfd ~= nil then
+            if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(cfd)) then
+                renderFontDrawText(font, '{ff0000}SEARCH: {ffffff}'..sampGetPlayerNickname(cfd):gsub('_', ' ')..' [ '..cfd..' ]', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
+                
+                if mainIni.config.metka then
+                    local result, handle = sampGetCharHandleBySampPlayerId(cfd)
+
+                    if result and doesCharExist(handle) and isCharOnScreen(handle) then
+                        local px, py, pz = getActiveCameraCoordinates()
+                        local tpx, tpy, tpz = getBodyPartCoordinates(5, handle)
+
+                        local result = processLineOfSight(px, py, pz, tpx, tpy, tpz, true, false, false, true, false, true, false, false)
+                        if not result then
+                            local wposX, wposY = convert3DCoordsToScreen(tpx, tpy, tpz)
+
+                            renderDrawLine(wposX - 3, wposY - 3, wposX + 3, wposY + 3, 1, 0xFFFFFFFF)
+                            renderDrawLine(wposX - 3, wposY + 3, wposX + 3, wposY - 3, 1, 0xFFFFFFFF)
+                        end
+                    end
+                end
+            end
+        end
+
+        local checkstream_pos = (cfd ~= nil and (getInvisibility(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) and mainIni.hud.ypos - 60 or mainIni.hud.ypos - 40) or mainIni.hud.ypos - 35)
+        if mainIni.config.otstrel then
+            local found, otstrel_stream = false, {}
+            for id = 0, sampGetMaxPlayerId(true) do
+                if sampIsPlayerConnected(id) then
+                    for k,v in pairs(otstrel_list) do
+                        if v.name == sampGetPlayerNickname(id) then
+                            table.insert(otstrel_stream, id)
+                        end
+                    end
+                end
+            end
+    
+            for _, id in pairs(otstrel_stream) do
+                local p_xpos, p_ypos, p_zpos = getCharCoordinates(PLAYER_PED)
+                local res, handle = sampGetCharHandleBySampPlayerId(id)
+                if res then
+                    checkstream_pos = checkstream_pos - 15
+                    local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
+                    local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
+                    if result then
+                        renderFontDrawText(font, sampGetPlayerNickname(id)..' {FFFFFF}[ {800000}'..id..' {FFFFFF}] | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xFF800000)
+                        found = true
+                    end
+                end
+            end
+            checkstream_pos = checkstream_pos - 15
+            if found then renderFontDrawText(font, 'Отстрел:', mainIni.hud.xpos - 1, checkstream_pos, 0xFFFFFFFF) end
+        end
+
+        if mainIni.config.cstream then
+            local found, ct_stream = false, {}
+            for id = 0, sampGetMaxPlayerId(true) do
+                if sampIsPlayerConnected(id) then
+                    for k,v in pairs(c_ids) do
+                        if k == id then
+                            table.insert(ct_stream, k, v)
+                        end
+                    end
+                end
+            end
+
+            for id, sum in pairs(ct_stream) do
+                local p_xpos, p_ypos, p_zpos = getCharCoordinates(PLAYER_PED)
+                local res, handle = sampGetCharHandleBySampPlayerId(id)
+                if res then
+                    checkstream_pos = checkstream_pos - 15
+                    local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
+                    local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
+                    if result then
+                        renderFontDrawText(font, sampGetPlayerNickname(id)..' {FFFFFF}[ {800000}'..id..' {FFFFFF}] ('..sum..'$) | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xFF800000)
+                        found = true
+                    end
+                end
+            end
+            checkstream_pos = checkstream_pos - 15
+            if found then renderFontDrawText(font, 'Контракты:', mainIni.hud.xpos - 1, checkstream_pos, 0xFFFFFFFF) end
+        end
+    
+        if getInvisibility(id) then renderFontDrawText(font, 'INVISIBILITY', mainIni.hud.xpos - 1, (cfd ~= nil and mainIni.hud.ypos - 50 or mainIni.hud.ypos - 27), 0xFF0088FF) end
+        renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE{FFFFFF} / '..(mainIni.config.nametag and '{008000}ON' or '{ff0000}OFF') or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', (cfd ~= nil and mainIni.hud.xpos + 217.88 or getInvisibility(id) and mainIni.hud.xpos + 114.2 or mainIni.hud.xpos - 1), mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
     end
 
     if mainIni.config.cstream then
@@ -1695,48 +1777,9 @@ function scriptBody()
             time_find = os.clock()
         end
 
-        if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(cfd)) then
-            renderFontDrawText(font, '{ff0000}SEARCH: {ffffff}'..sampGetPlayerNickname(cfd):gsub('_', ' ')..' [ '..cfd..' ]', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
-            
-            if mainIni.config.metka then
-                local result, handle = sampGetCharHandleBySampPlayerId(cfd)
-
-                if result and doesCharExist(handle) and isCharOnScreen(handle) then
-                    local px, py, pz = getActiveCameraCoordinates()
-                    local tpx, tpy, tpz = getBodyPartCoordinates(5, handle)
-
-                    local result = processLineOfSight(px, py, pz, tpx, tpy, tpz, true, false, false, true, false, true, false, false)
-                    if not result then
-                        local wposX, wposY = convert3DCoordsToScreen(tpx, tpy, tpz)
-
-                        renderDrawLine(wposX - 3, wposY - 3, wposX + 3, wposY + 3, 1, 0xFFFFFFFF)
-                        renderDrawLine(wposX - 3, wposY + 3, wposX + 3, wposY - 3, 1, 0xFFFFFFFF)
-                    end
-                end
-            end
-        end
-
         if not sampIsPlayerConnected(cfd) then
             cfd = nil
             sampAddChatMessage('[ Мысли ]: Преследование прекращено.', 0xCCCCCC)
-        end
-    end
-
-    if getInvisibility(id) then
-        if cfd ~= nil then
-            renderFontDrawText(font, '{0088ff}INVISIBILITY', mainIni.hud.xpos - 1, mainIni.hud.ypos - 50, 0xFFFFFFFF)
-        else
-            renderFontDrawText(font, '{0088ff}INVISIBILITY', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xFFFFFFFF)
-        end
-    end
-
-    if cfd ~= nil then
-        renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE' or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', mainIni.hud.xpos + 217.88, mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
-    else
-        if getInvisibility(id) then
-            renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE' or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', mainIni.hud.xpos + 114.2, mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
-        else
-            renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE' or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
         end
     end
 end
