@@ -657,7 +657,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
             if playerid == id then
                 if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
                     sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
-                    table.insert(mainIni.stats, os.date('%d.%m.%Y')..',2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..damage..','..lastdamage.weapon.name)
+                    table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..damage..','..lastdamage.weapon.name)
                     if mainIni.config.autoscreen then screenct() end
                     if playerid == cfd then cfd = nil end
                     if v.name == sampGetPlayerNickname(playerid) then
@@ -1068,7 +1068,7 @@ function sampev.onServerMessage(color, text)
         if text:find('{FF0000}<< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}>>') then
             local ct_name = text:match('выполнил контракт на (.+), и получил')
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
-            table.insert(mainIni.stats, os.date('%d.%m.%Y')..',1,0,'..os.time()..','..ct_name..','..lastdamage.weapon.name)
+            table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.weapon.name)
         end
     end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
@@ -1078,7 +1078,7 @@ function sampev.onServerMessage(color, text)
     end
     if text:find('%[ Мысли %]: Я положил ящик на склад%s*{......}%s*%[ .+ %] ') then
         local ammo = text:match('%[ Мысли %]: Я положил ящик на склад%s*{......}%s*%[ (.-) %]')
-        table.insert(mainIni.stats, os.date('%d.%m.%Y')..',3,'..ammo..','..os.time())
+        table.insert(mainIni.stats, '3,'..ammo..','..os.time())
     end
     if text:find('{8B8B8B}Агентство: {FF0000}новый контракт {8B8B8B}.+{FF0000}, сумма {8B8B8B}%d+$ %[ /goc принять %]%[ /givec поручить %]') then
         local name = text:match('новый контракт {8B8B8B}(.-){')
@@ -1520,9 +1520,8 @@ function dialogFunc()
             if listitem == 1 then
                 local points = 0
                 for _, line in pairs(mainIni.stats) do
-                    local _, type = line:match('(.-),(%d+),')
-                    type = tonumber(type)
-                    points = points + (type == 1 and mainIni.config.points_contracts or (type == 2 and points + mainIni.config.points_otstrel or mainIni.config.points_ammo))
+                    local type = tonumber(line:match('(%d-),'))
+                    points = points + (type == 1 and mainIni.config.points_contracts or (type == 2 and mainIni.config.points_otstrel or mainIni.config.points_ammo))
                 end
                 sampShowDialog(D_AGENTSTATS_MAIN, 'Моя работоспособность ['..os.date('%d.%m.%Y')..']', 'Тип\tЗначение\n{cccccc}Суммарное количество набранных баллов:\t{0088FF}'..points..'{FFFFFF}\nИнформация о выполненных контрактах\nИнформация о работе отстрела\nИнформация о доставленных боеприпасах\nНастройка баллов\n{cccccc}Очистить свою работоспособность', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
                 openMenu = false
@@ -1641,10 +1640,10 @@ function dialogFunc()
     local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_INFO)
     if result and button == 1 then
         if listitem ~= 0 then
-            local dialog_text, array, i = ((agentstats_type == 1 or agentstats_type == 2) and 'Время\tНикнейм\tУрон\tОружие\n' or 'Время\tБоеприпасы\n'), {}, 0
+            local dialog_text, array = ((agentstats_type == 1 or agentstats_type == 2) and 'Время\tНикнейм\tУрон\tОружие\n' or 'Время\tБоеприпасы\n'), {}
             for _, line in pairs(mainIni.stats) do
-                local date, type = line:match('(.-),(.-),')
-                if tonumber(type) == agentstats_type then
+                local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
+                if type == agentstats_type then
                     local found = false
                     for k,v in pairs(array) do
                         if v == date then
@@ -1652,39 +1651,34 @@ function dialogFunc()
                             break
                         end
                     end
-                    if not found then 
-                        i = i + 1
-                        array[i] = date
+                    if not found then
+                        table.insert(array, date)
                     end
                 end
             end
-            for item, k in pairs(array) do
+            for item, v in pairs(array) do
                 if listitem == item then
                     for _, line in pairs(mainIni.stats) do
-                        local date, type, ammo, time, nickname, damage, weapon
-                        type = tonumber(line:match('.-,(%d-),'))
+                        local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
+                        local ammo, time, nickname, damage, weapon
                         if type == 3 then
-                            date, ammo, time = line:match('(.-),.-,(.-),(.-)')
+                            ammo, time = line:match('.-,(.-),(.+)')
                         else
-                            date, ammo, time, nickname, damage, weapon = line:match('(.-),.-,(.-),(.-),(.-),(.-),(.+)')
+                            time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.+)')
                         end
-                        time = tonumber(time)
-                        if type == agentstats_type and date == k then
-                            g_date = date
+                        if type == agentstats_type and os.date('%d.%m.%Y', date) == os.date('%d.%m.%Y', v) then
+                            g_date = os.date('%d.%m.%Y', date)
                             if agentstats_type == 1 or agentstats_type == 2 then
-                                dialog_text = dialog_text..os.date('[%H:%M:%S]', time)..'\t'..nickname..'\t{FF6347}- '..damage..'HP{ffffff}\t'..weapon..'\n'
+                                dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t{FF6347}- '..damage..'HP{ffffff}\t'..weapon..'\n'
                             elseif agentstats_type == 3 then
-                                dialog_text = dialog_text..os.date('[%H:%M:%S]', time)..'\t{FF6347}'..u8:decode(ammo)..'{FFFFFF}\n'
+                                dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t{FF6347}'..u8:decode(ammo)..'{FFFFFF}\n'
                             end
                         end
                     end
                 end
             end
-            if g_date ~= nil then
-                sampShowDialog(D_INVALID, 'Информация о '..(agentstats_type == 1 and 'выполненных контрактах' or (agentstats_type == 2 and 'работе отстрела' or 'принесенных боеприпасах'))..' ['..g_date..']', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
-            else
-                sampAddChatMessage('[ Hitman Helper ]: Этот список пуст', 0xCCCCCC)
-            end
+
+            sampShowDialog(D_INVALID, 'Информация о '..(agentstats_type == 1 and 'выполненных контрактах' or (agentstats_type == 2 and 'работе отстрела' or 'принесенных боеприпасах'))..' ['..g_date..']', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
         end
     end
 
@@ -1727,17 +1721,16 @@ end
 function showAgentStats(num)
     local array = {}
     for _, line in pairs(mainIni.stats) do
-        local date, type = line:match('(.-),(.-),')
-        type = tonumber(type)
-        if tonumber(type) == num then
+        local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
+        if type == num then
             local found = false
             for _, v in pairs(array) do
-                if v.date == date then 
+                if v.date == os.date('%d.%m.%Y', date) then 
                     v.number = v.number + 1
                     found = true
                 end
             end
-            if not found then table.insert(array, {date = date, number = 1}) end
+            if not found then table.insert(array, {date = os.date('%d.%m.%Y', date), number = 1}) end
         end
     end
     local kills = 0
