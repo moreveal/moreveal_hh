@@ -657,7 +657,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
             if playerid == id then
                 if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
                     sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
-                    table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..damage..','..lastdamage.weapon.name)
+                    table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name)
                     if mainIni.config.autoscreen then screenct() end
                     if playerid == cfd then cfd = nil end
                     if v.name == sampGetPlayerNickname(playerid) then
