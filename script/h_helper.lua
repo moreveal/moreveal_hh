@@ -26,6 +26,7 @@ local c_ids = {} -- люди из /contractas
 local anonymizer_names = {} -- ники в анонимайзере
 local weapons_list = {} -- названия оружий
 local macrosses_list = {} -- макросы
+local lastdamage = {} -- информация по последнему попаданию
 
 local otstrel_list = {} -- люди, состоящие в списке отстрела
 local otstrel_online = {} -- люди, состоящие в списке отстрела онлайн
@@ -63,9 +64,13 @@ local D_TNSETTING_ONE = 5121 -- диалог для выбора временного никнейма (1)
 local D_TNSETTING_TWO = 5122 -- диалог для выбора временного никнейма (2)
 local D_TNSETTING_THREE = 5123 -- диалог для выбора временного никнейма (3)
 
-local script_version = 35 --[[ Используется для автообновления, во избежание проблем 
+local D_AGENTSTATS_MAIN = 5124 -- диалог для просмотра работоспособности агента (1)
+local D_AGENTSTATS_POINTS = 5125 -- диалог для просмотра работоспособности агента (2)
+local D_AGENTSTATS_INFO = 5126 -- диалог для просмотра работоспособности агента (3)
+
+local script_version = 36 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '1.4' -- версия для вывода в окне настроек, не изменять
+local text_version = '1.5' -- версия для вывода в окне настроек, не изменять
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
 
@@ -108,10 +113,17 @@ function main()
             fakenick = false,
             nametag = true,
             shud = false,
-            hud = true
+            hud = true,
+            points_ammo = 1,
+            points_contracts = 2,
+            points_otstrel = 3
         },
 
         otstrel_list = {
+            nil,
+        },
+
+        stats = {
             nil,
         },
 
@@ -215,10 +227,11 @@ function main()
     end
     requests = require 'requests'
 
-    local ip, port = sampGetCurrentServerAddress()
-    if ip ~= '176.32.37.62' and port ~= '7777' then
+    local ip = select(1, sampGetCurrentServerAddress())..':'..select(2, sampGetCurrentServerAddress())
+    if ip ~= '176.32.37.62:7777' then
+        mainIni.config.fakenick = false 
+        mainIni.config.nametag = true
         if mainIni.config.onlypp then
-            sampAddChatMessage('[ Hitman Helper ]: Это не Pears Project, не думаю, что я буду полезен тебе тут..', 0xCCCCCC)
             thisScript():unload()
         end
     else
@@ -637,12 +650,14 @@ function layoutMacrossString(m_key)
 end
 
 function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
+    lastdamage.playerid, lastdamage.damage, lastdamage.weapon, lastdamage.bodypart = playerid, damage, {id = weapon, name = weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)]}, bodypart
     if mainIni.config.otstrel then
         for k, v in pairs(otstrel_list) do
             local id = sampGetPlayerIdByNickname(v.name)
             if playerid == id then
                 if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
-                    sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)], 0xCCCCCC)
+                    sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
+                    table.insert(mainIni.stats, os.date('%d.%m.%Y')..',2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..damage..','..lastdamage.weapon.name)
                     if mainIni.config.autoscreen then screenct() end
                     if playerid == cfd then cfd = nil end
                     if v.name == sampGetPlayerNickname(playerid) then
@@ -1051,13 +1066,19 @@ function sampev.onServerMessage(color, text)
     if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.config.fakenick = false mainIni.config.nametag = true end
     if acc_id ~= nil then
         if text:find('{FF0000}<< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}>>') then
-            if cfd == sampGetPlayerIdByNickname(text:match('выполнил контракт на (.+), и получил')) then cfd = nil end
+            local ct_name = text:match('выполнил контракт на (.+), и получил')
+            if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
+            table.insert(mainIni.stats, os.date('%d.%m.%Y')..',1,0,'..os.time()..','..ct_name..','..lastdamage.weapon.name)
         end
     end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
         sampAddChatMessage(text, 0x0088FF)
         if mainIni.config.autoscreen then screenct() end
         return false
+    end
+    if text:find('%[ Мысли %]: Я положил ящик на склад%s*{......}%s*%[ .+ %] ') then
+        local ammo = text:match('%[ Мысли %]: Я положил ящик на склад%s*{......}%s*%[ (.-) %]')
+        table.insert(mainIni.stats, os.date('%d.%m.%Y')..',3,'..ammo..','..os.time())
     end
     if text:find('{8B8B8B}Агентство: {FF0000}новый контракт {8B8B8B}.+{FF0000}, сумма {8B8B8B}%d+$ %[ /goc принять %]%[ /givec поручить %]') then
         local name = text:match('новый контракт {8B8B8B}(.-){')
@@ -1271,7 +1292,7 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{ffffff}Авто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Контракты в зоне стрима\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на голове игрока, занесенного в CFD\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока, занесенного в CFD, на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{cccccc}Моя работоспособность\n{ffffff}Авто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Контракты в зоне стрима\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на голове игрока, занесенного в CFD\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока, занесенного в CFD, на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function macrossesFunc()
@@ -1496,11 +1517,21 @@ function dialogFunc()
                 sampShowDialog(D_INVALID, 'Последние нововведения || Версия: '..text_version, changelog, '*', nil, DIALOG_STYLE_MSGBOX)
                 openMenu = false
             end
-            if listitem == 1 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
-            if listitem == 2 then mainIni.config.cstream = not mainIni.config.cstream end
-            if listitem == 3 then mainIni.config.metka = not mainIni.config.metka end
-            if listitem == 4 then mainIni.config.without_screen = not mainIni.config.without_screen end
-            if listitem == 5 then
+            if listitem == 1 then
+                local points = 0
+                for _, line in pairs(mainIni.stats) do
+                    local _, type = line:match('(.-),(%d+),')
+                    type = tonumber(type)
+                    points = points + (type == 1 and mainIni.config.points_contracts or (type == 2 and points + mainIni.config.points_otstrel or mainIni.config.points_ammo))
+                end
+                sampShowDialog(D_AGENTSTATS_MAIN, 'Моя работоспособность ['..os.date('%d.%m.%Y')..']', 'Тип\tЗначение\n{cccccc}Суммарное количество набранных баллов:\t{0088FF}'..points..'{FFFFFF}\nИнформация о выполненных контрактах\nИнформация о работе отстрела\nИнформация о доставленных боеприпасах\nНастройка баллов\n{cccccc}Очистить свою работоспособность', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+                openMenu = false
+            end
+            if listitem == 2 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
+            if listitem == 3 then mainIni.config.cstream = not mainIni.config.cstream end
+            if listitem == 4 then mainIni.config.metka = not mainIni.config.metka end
+            if listitem == 5 then mainIni.config.without_screen = not mainIni.config.without_screen end
+            if listitem == 6 then
                 mainIni.config.otstrel = not mainIni.config.otstrel
                 if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
                     local f = io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'w')
@@ -1512,26 +1543,26 @@ function dialogFunc()
                     loadOtstrelList(1)
                 end
             end
-            if listitem == 6 then 
+            if listitem == 7 then 
 				mainIni.config.ooc_only = not mainIni.config.ooc_only
 				if mainIni.config.ooc_only then sampAddChatMessage('Вы включили OOC-чат по умолчанию. Для использования IC чата, введите ">" перед сообщением.', 0xCCCCCC) end
 			end
-            if listitem == 7 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
-            if listitem == 8 then mainIni.config.hud = not mainIni.config.hud end
-            if listitem == 9 then mainIni.config.customctstr = not mainIni.config.customctstr end
-            if listitem == 10 then mainIni.config.automobile = not mainIni.config.automobile end
-            if listitem == 11 then mainIni.config.autofill = not mainIni.config.autofill end
-            if listitem == 12 then mainIni.config.customid = not mainIni.config.customid end
-            if listitem == 13 then mainIni.config.s_speed = not mainIni.config.s_speed end
-            if listitem == 14 then
+            if listitem == 8 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
+            if listitem == 9 then mainIni.config.hud = not mainIni.config.hud end
+            if listitem == 10 then mainIni.config.customctstr = not mainIni.config.customctstr end
+            if listitem == 11 then mainIni.config.automobile = not mainIni.config.automobile end
+            if listitem == 12 then mainIni.config.autofill = not mainIni.config.autofill end
+            if listitem == 13 then mainIni.config.customid = not mainIni.config.customid end
+            if listitem == 14 then mainIni.config.s_speed = not mainIni.config.s_speed end
+            if listitem == 15 then
                 chatSettings()
                 openMenu = false
             end
-            if listitem == 15 then
+            if listitem == 16 then
                 anonymizerSettings()
                 openMenu = false
             end
-            if listitem == 16 then
+            if listitem == 17 then
                 local weapon_line
                 for k, v in pairs(weapons_list) do
                     weapon_line = (weapon_line == nil and 'Текущее название оружия\tНовое значение\n'..v..'\t>>\n' or weapon_line..v..'\t>>\n')
@@ -1539,17 +1570,17 @@ function dialogFunc()
                 sampShowDialog(D_GSETTING_ONE, 'Настройка', weapon_line, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
                 openMenu = false
             end
-            if listitem == 17 then
+            if listitem == 18 then
                 sampAddChatMessage('[ Hitman Helper ]: Перемещайте курсор для установки нового положения кастомного худа', 0xCCCCCC)
                 sampAddChatMessage('[ Hitman Helper ]: ЛКМ - установить новое положение | ПКМ - вернуть изначальное положение', 0xCCCCCC)
                 hud_move = true
                 openMenu = false
             end
-            if listitem == 18 then
+            if listitem == 19 then
                 showSettingMacrosses()
                 openMenu = false
             end
-            if listitem == 19 then
+            if listitem == 20 then
                 sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
                 sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
                 sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
@@ -1604,10 +1635,117 @@ function dialogFunc()
     local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_THREE)
     if result and button == 1 then
         mainIni['tempname'][current_tempname] = input
-        sampAddChatMessage('[ Hitman Helper ]: Новый никнейм установлен: '..input, 0xCCCCCC)
         sampShowDialog(D_TNSETTING_ONE, ' ', 'Тип\tВременный никнейм\n{FF6347}Отстрел\t{FFFFFF}'..mainIni.tempname.otstrel..'\n{FF6347}Контракты\t{FFFFFF}'..mainIni.tempname.contracts..'\n{FF6347}Тренировки\t{FFFFFF}'..mainIni.tempname.trainings, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
     end
 
+    local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_INFO)
+    if result and button == 1 then
+        if listitem ~= 0 then
+            local dialog_text, array, i = ((agentstats_type == 1 or agentstats_type == 2) and 'Время\tНикнейм\tУрон\tОружие\n' or 'Время\tБоеприпасы\n'), {}, 0
+            for _, line in pairs(mainIni.stats) do
+                local date, type = line:match('(.-),(.-),')
+                if tonumber(type) == agentstats_type then
+                    local found = false
+                    for k,v in pairs(array) do
+                        if v == date then
+                            found = true
+                            break
+                        end
+                    end
+                    if not found then 
+                        i = i + 1
+                        array[i] = date
+                    end
+                end
+            end
+            for item, k in pairs(array) do
+                if listitem == item then
+                    for _, line in pairs(mainIni.stats) do
+                        local date, type, ammo, time, nickname, damage, weapon
+                        type = tonumber(line:match('.-,(%d-),'))
+                        if type == 3 then
+                            date, ammo, time = line:match('(.-),.-,(.-),(.-)')
+                        else
+                            date, ammo, time, nickname, damage, weapon = line:match('(.-),.-,(.-),(.-),(.-),(.-),(.+)')
+                        end
+                        time = tonumber(time)
+                        if type == agentstats_type and date == k then
+                            g_date = date
+                            if agentstats_type == 1 or agentstats_type == 2 then
+                                dialog_text = dialog_text..os.date('[%H:%M:%S]', time)..'\t'..nickname..'\t{FF6347}- '..damage..'HP{ffffff}\t'..weapon..'\n'
+                            elseif agentstats_type == 3 then
+                                dialog_text = dialog_text..os.date('[%H:%M:%S]', time)..'\t{FF6347}'..u8:decode(ammo)..'{FFFFFF}\n'
+                            end
+                        end
+                    end
+                end
+            end
+            if g_date ~= nil then
+                sampShowDialog(D_INVALID, 'Информация о '..(agentstats_type == 1 and 'выполненных контрактах' or (agentstats_type == 2 and 'работе отстрела' or 'принесенных боеприпасах'))..' ['..g_date..']', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+            else
+                sampAddChatMessage('[ Hitman Helper ]: Этот список пуст', 0xCCCCCC)
+            end
+        end
+    end
+
+    local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_POINTS)
+    if result and button == 1 then
+        if sampGetDialogText():find('Введите новое значение баллов') then
+            mainIni['config'][agentstats_points] = input   
+            sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела:\t\t'..mainIni.config.points_otstrel..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+        else
+            agentstats_points = (listitem == 0 and 'points_contracts' or (listitem == 1 and 'points_otstrel' or 'points_ammo'))
+            sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Введите новое значение баллов:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
+        end
+    end
+
+    local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_MAIN)
+    if result and button == 1 then
+        if sampGetDialogText():find('При очистке вашей работоспособности, восстановить её уже не получится') then
+            mainIni.stats = {}
+            sampAddChatMessage('[ Hitman Helper ]: Ваша работоспособность была очищена.', 0xCCCCCC)
+        else
+            if listitem == 1 then -- Информация о выполненных контрактах
+                showAgentStats(1)
+            end
+            if listitem == 2 then -- Информация о работе отстрела
+                showAgentStats(2)
+            end
+            if listitem == 3 then -- Информация о доставленных боеприпасах
+                showAgentStats(3)
+            end
+            if listitem == 4 then
+                sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела:\t\t'..mainIni.config.points_otstrel..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+            end
+            if listitem == 5 then
+                sampShowDialog(D_AGENTSTATS_MAIN, 'Предупреждение', 'При очистке вашей работоспособности, восстановить её уже не получится.\nВы уверены, что желаете это сделать?', 'Да', 'Нет', DIALOG_STYLE_MSGBOX)
+            end
+        end
+    end
+end
+
+function showAgentStats(num)
+    local array = {}
+    for _, line in pairs(mainIni.stats) do
+        local date, type = line:match('(.-),(.-),')
+        type = tonumber(type)
+        if tonumber(type) == num then
+            local found = false
+            for _, v in pairs(array) do
+                if v.date == date then 
+                    v.number = v.number + 1
+                    found = true
+                end
+            end
+            if not found then table.insert(array, {date = date, number = 1}) end
+        end
+    end
+    local kills = 0
+    for _,v in pairs(array) do kills = kills + v.number end
+    local dialog_text = 'День\tКоличество '..(num == 3 and 'боеприпасов' or 'убийств')..'\n{cccccc}Суммарное количество '..(num == 3 and 'боеприпасов' or 'убийств')..':\t'..kills..'\n'
+    for _,v in pairs(array) do dialog_text = dialog_text..'['..v.date..']\t'..v.number..'\n' end
+    agentstats_type = num
+    sampShowDialog(D_AGENTSTATS_INFO, '{cccccc}Информация о '..(num == 3 and 'принесенных боеприпасах' or (num == 1 and 'выполненных контрактах' or 'работе отстрела')), dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function chatSettings()
@@ -1755,7 +1893,7 @@ function scriptBody()
         end
     
         if getInvisibility(id) then renderFontDrawText(font, 'INVISIBILITY', mainIni.hud.xpos - 1, (cfd ~= nil and mainIni.hud.ypos - 50 or mainIni.hud.ypos - 27), 0xFF0088FF) end
-        renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE{FFFFFF} / '..(mainIni.config.nametag and '{008000}ON' or '{ff0000}OFF') or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', (cfd ~= nil and mainIni.hud.xpos + 217.88 or getInvisibility(id) and mainIni.hud.xpos + 114.2 or mainIni.hud.xpos - 1), mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
+        renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE{FFFFFF} / '..(mainIni.config.nametag and '{008000}ON' or '{ff0000}OFF') or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', (cfd ~= nil and mainIni.hud.xpos + 225 or getInvisibility(id) and mainIni.hud.xpos + 114.2 or mainIni.hud.xpos - 1), mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
     end
 
     if mainIni.config.cstream then
