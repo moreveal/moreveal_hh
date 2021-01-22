@@ -68,9 +68,9 @@ local D_AGENTSTATS_MAIN = 5124 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 5125 -- диалог для просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 5126 -- диалог для просмотра работоспособности агента (3)
 
-local script_version = 36 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 38 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '1.5' -- версия для вывода в окне настроек, не изменять
+local text_version = '1.6' -- версия для вывода в окне настроек, не изменять
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
 
@@ -279,10 +279,45 @@ function main()
     if tonumber(new_version) > script_version then updateScript() update = true end
     changelog = u8:decode(requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/last_news.txt').text)
 
-    if not update then
-        sampAddChatMessage('[ Hitman Helper ]: Привет, '..sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))):gsub('_', ' ')..', для открытия настроек скрипта нажми [ '.. layoutMacrossString('setting')..' ]', 0xCCCCCC)
-    end
-    if mainIni.config.otstrel then loadOtstrelList(1) end
+    lua_thread.create(function ()
+        if not update then
+            local c_one, c_two = 0, 16777215
+            local name = sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)))
+            local lenght = renderGetFontDrawTextLength(font, "Settings: " .. layoutMacrossString('setting')) > renderGetFontDrawTextLength(font, "Hello, " .. name:gsub("_", " ")) + 80 and renderGetFontDrawTextLength(font, "Settings: " .. layoutMacrossString('setting')) or renderGetFontDrawTextLength(font, "Hello, " .. name:gsub("_", " ")) + 80
+            local w_one, w_two = renderGetFontDrawHeight(font) + 20, renderGetFontDrawHeight(font)
+            local timer = os.clock()
+
+            while os.clock() - timer < 10 do
+                wait(0)
+
+                local sw, sh = getScreenResolution()
+
+                if os.clock() - timer < 5 then
+                    if c_one < 2852126720.0 then
+                        c_one = c_one + 83886080
+                    elseif c_two < 4278190080.0 then
+                        c_two = c_two + 16777216
+                    end
+                elseif c_one < c_two then
+                    c_two = c_two - 167772160
+                else
+                    if c_one - 16777216 > 0 then
+                        c_one = c_one - 16777216
+                    end
+
+                    if c_two - 16777216 > 0 then
+                        c_two = c_two - 16777216
+                    end
+                end
+                
+                renderDrawBox(sw / 2 - lenght / 2, sh / 2 - w_one / 2, lenght, w_one, c_one)
+                renderDrawBox(sw / 2 - lenght / 2, sh / 2 + renderGetFontDrawHeight(font) / 2 + renderGetFontDrawHeight(font) / 2 + 4, lenght, renderGetFontDrawHeight(font), c_one)
+                renderFontDrawText(font, "Hello, " .. name:gsub("_", " "), sw / 2 - renderGetFontDrawTextLength(font, "Hello, " .. name:gsub("_", " ")) / 2, sh / 2 - renderGetFontDrawHeight(font) / 2, c_two)
+                renderFontDrawText(font, "Settings: " .. layoutMacrossString('setting'), sw / 2 - renderGetFontDrawTextLength(font, "Settings: " .. layoutMacrossString('setting')) / 2, sh / 2 + renderGetFontDrawHeight(font) / 2 + renderGetFontDrawHeight(font) / 2 + 4, c_two)
+            end
+        end
+    end)
+    loadOtstrelList(1)
 
     id = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
     if thispp then
@@ -517,7 +552,7 @@ function loadOtstrelList(type)
     local response = requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/otstrel_list')
     for name in response.text:gmatch('[^\r\n]+') do table.insert(otstrel_list, {name = name}) end
 
-    if type == 1 then
+    if type == 1 and mainIni.config.otstrel then
         local count = 0
         for k, v in pairs(otstrel_list) do
             for s, t in pairs(mainIni.otstrel_list) do 
@@ -651,22 +686,20 @@ end
 
 function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     lastdamage.playerid, lastdamage.damage, lastdamage.weapon, lastdamage.bodypart = playerid, damage, {id = weapon, name = weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)]}, bodypart
-    if mainIni.config.otstrel then
-        for k, v in pairs(otstrel_list) do
-            local id = sampGetPlayerIdByNickname(v.name)
-            if playerid == id then
-                if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
-                    sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
-                    table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name)
-                    if mainIni.config.autoscreen then screenct() end
-                    if playerid == cfd then cfd = nil end
-                    if v.name == sampGetPlayerNickname(playerid) then
-                        v.time = os.time()
-                        break
-                    end
+    for k, v in pairs(otstrel_list) do
+        local id = sampGetPlayerIdByNickname(v.name)
+        if playerid == id then
+            if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
+                sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
+                table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name)
+                if mainIni.config.autoscreen then screenct() end
+                if playerid == cfd then cfd = nil end
+                if v.name == sampGetPlayerNickname(playerid) then
+                    v.time = os.time()
+                    break
                 end
-                break
             end
+            break
         end
     end
 end
@@ -1646,7 +1679,7 @@ function dialogFunc()
                 if type == agentstats_type then
                     local found = false
                     for k,v in pairs(array) do
-                        if v == date then
+                        if os.date('%d.%m.%Y', v) == os.date('%d.%m.%Y', date) then
                             found = true
                             break
                         end
