@@ -68,7 +68,7 @@ local D_AGENTSTATS_MAIN = 5124 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 5125 -- диалог для просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 5126 -- диалог для просмотра работоспособности агента (3)
 
-local script_version = 37 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 38 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.6' -- версия для вывода в окне настроек, не изменять
 
@@ -1101,7 +1101,7 @@ function sampev.onServerMessage(color, text)
         if text:find('{FF0000}<< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}>>') then
             local ct_name = text:match('выполнил контракт на (.+), и получил')
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
-            table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.weapon.name)
+            table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name)
         end
     end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
