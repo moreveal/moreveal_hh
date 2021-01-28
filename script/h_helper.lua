@@ -692,7 +692,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     lastdamage.playerid, lastdamage.damage, lastdamage.weapon, lastdamage.bodypart = playerid, damage, {id = weapon, name = weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)]}, bodypart
     for k, v in pairs(otstrel_list) do
         local id = sampGetPlayerIdByNickname(v.name)
-        if playerid == id then
+        if playerid == id and last_contract ~= v.name then
             if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
                 sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
                 table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name)
@@ -1106,6 +1106,12 @@ function sampev.onServerMessage(color, text)
             local ct_name = text:match('выполнил контракт на (.+), и получил')
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
             table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name)
+        end
+        if text:find('{8B8B8B}Агент №'..acc_id..' {FF0000}принял контракт на: {8B8B8B}.-%[%d-%] {00AC31}Цена: %d-$ {cccccc}') then
+            last_contract = text:match('на: {8B8B8B}(.-)%[%d-%]')
+        end
+        if text:find('{FF0000}%*%* {8B8B8B}.- поручил {FF0000}Агенту №{8B8B8B}'..acc_id..' {FF0000}выполнить контракт на: {8B8B8B}.- %*%*') then
+            last_contract = text:match('на: {8B8B8B}(.-) %*%*')
         end
     end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
