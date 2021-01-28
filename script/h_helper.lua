@@ -68,9 +68,9 @@ local D_AGENTSTATS_MAIN = 5124 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 5125 -- диалог для просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 5126 -- диалог для просмотра работоспособности агента (3)
 
-local script_version = 38 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 39 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '1.6' -- версия для вывода в окне настроек, не изменять
+local text_version = '1.7' -- версия для вывода в окне настроек, не изменять
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
 
@@ -103,6 +103,7 @@ function main()
             customctstr = false,
             macrosses = true,
             metka = false,
+            autofind = true,
             without_screen = false,
             otstrel = false,
             ooc_only = false,
@@ -195,18 +196,19 @@ function main()
         },
 
         macrosses = {
-            knock = 164 ..' + '.. 221,
-            boot = 164 ..' + '.. 219,
-            members = 164 ..' + '.. 186,
-            contracts = 164 ..' + '.. 222,
-            cancel = 164 .. ' + '.. 190,
+            knock = 90 ..' + '.. 221,
+            boot = 90 ..' + '.. 219,
+            members = 90 ..' + '.. 186,
+            contracts = 90 ..' + '.. 222,
+            cancel = 90 .. ' + '.. 190,
             getct = 190 .. ' + '.. 191,
-            myc = 164 .. ' + '.. 188,
+            myc = 90 .. ' + '.. 188,
             invis = 88 .. ' + '.. 90,
-            otstrel = 164 .. ' + '.. 76,
-            admins = 164 .. ' + '.. 75,
+            otstrel = 90 .. ' + '.. 76,
+            admins = 90 .. ' + '.. 75,
             setting = 35,
-            screen = 18 .. ' + ' .. 90
+            screen = 119,
+            find = 88 .. ' + '.. 87
         },
 
         tempname = {
@@ -612,8 +614,10 @@ function isKeysDown(key, state)
 end
 
 function sampev.onDisplayGameText(style, time, text)
-	if style == 6 and cfd ~= nil then 
-		return false
+    if style == 6 then
+        if cfd ~= nil and mainIni.config.autofind then 
+            return false
+        end
     end
 end
 
@@ -665,7 +669,7 @@ end
 function showSettingMacrosses()
     local macrosses_array = {}
     for k, v in pairs(macrosses_list) do macrosses_array[k] = layoutMacrossString(k) end
-    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function layoutMacrossString(m_key)
@@ -1150,11 +1154,11 @@ function sampev.onServerMessage(color, text)
             return {color, '{ffff00}Агент №'..number..' принял контракт на: {'..colour..'}'..sampGetPlayerNickname(id):gsub('_', ' ')..' ['..id..']{ffff00} | Цена: {008000}'..price..'$'}
         end
 
-        if text:find('%{......%}« %{......%}Агент № (%d+) выполнил контракт на .+, и получил %{......%}(%d+)$ %{......%}»') then
-            local number, nick, price = text:match('%{......%}« %{......%}Агент № (%d+) выполнил контракт на (.+), и получил %{......%}(%d+)$ %{......%}»')
+        if text:find('{FF0000}<< {0088ff}Агент № %d- выполнил контракт на .-, и получил {00BC12}%d-$ {FF0000}>>') then
+            local number, nick, price = text:match('{FF0000}<< {0088ff}Агент № (%d-) выполнил контракт на (.-), и получил {00BC12}(%d-)$ {FF0000}>>')
             local id = sampGetPlayerIdByNickname(nick)
             local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
-            return {color, '{ffff00}Агент №'..number..' выполнил контракт на {'..colour..'}'..nick:gsub('_', ' ')..'{ffff00} ['..id..'] получив {008000}'..price..'$'}
+            return {color, '{ffff00}Агент №'..number..' выполнил контракт на {'..colour..'}'..nick:gsub('_', ' ')..'{ffff00}['..id..'], получив {008000}'..price..'$'}
         end
 
         if text:find('%{......%}%*%* %{......%}Агент №(%d+) %{......%}отказывается выполнять контракт на: %{......%}.+%[(%d+)%] %{......%}%*%*') then
@@ -1325,65 +1329,71 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{cccccc}Моя работоспособность\n{ffffff}Авто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Контракты в зоне стрима\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на голове игрока, занесенного в CFD\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока, занесенного в CFD, на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{cccccc}Моя работоспособность\n{ffffff}Авто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Контракты в зоне стрима\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на игроке в [/cfd]\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\nПостоянный поиск игрока в [/cfd]\t'..(mainIni.config.autofind and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока в [/cfd] на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function macrossesFunc()
     if mainIni.config.macrosses then
-        if isKeysDown(macrosses_list.knock, true) and not sampIsChatInputActive() then
-            if tonumber(sampGetNearestPlayer()) ~= -1 then
-                sampSendChat("/ko " .. sampGetNearestPlayer())
+        if not sampIsChatInputActive() then
+            if isKeysDown(macrosses_list.knock, true) then
+                if tonumber(sampGetNearestPlayer()) ~= -1 then
+                    sampSendChat("/ko " .. sampGetNearestPlayer())
+                    wait(300)
+                end
+
+            elseif isKeysDown(macrosses_list.boot, true) then
+                goKeyPressed(78)
+                lua_thread.create(function ()
+                    while not sampTextdrawIsExists(2202) do wait(0) end
+                    sampSendClickTextdraw(2202)
+                    while not sampTextdrawIsExists(2176) do wait(0) end
+                    sampSendClickTextdraw(2176)
+                    while not sampIsDialogActive(899) do wait(0) end
+                    sampSendDialogResponse(899, 1, 1, -1)
+                    while not sampIsDialogActive(547) do wait(0) end
+                    if lastknocked ~= nil then sampSendDialogResponse(547, 1, 1, lastknocked) sampCloseCurrentDialogWithButton(1) end
+                end)
+                wait(300)
+
+            elseif isKeysDown(macrosses_list.members, true) then
+                sampSendChat('/members')
+                wait(300)
+
+            elseif isKeysDown(macrosses_list.contracts, true) then
+                sampSendChat('/contractas')
+                wait(300)
+
+            elseif isKeysDown(macrosses_list.cancel, true) then
+                sampSendChat('/cancel')
+                wait(300)
+
+            elseif isKeysDown(macrosses_list.getct, true) then
+                if lastct_instream ~= nil then
+                    sampSendChat('/goc '..lastct_instream)
+                end
+                wait(300)
+
+            elseif isKeysDown(macrosses_list.myc, true) then
+                sampSendChat('/myc')
+                wait(300)
+
+            elseif isKeysDown(macrosses_list.invis, true) then
+                sampSendChat('/hmenu')
+                incInvis = true
+                wait(300)
+
+            elseif isKeysDown(macrosses_list.otstrel, true) then
+                openOtstrelList()
+                wait(300)
+
+            elseif isKeysDown(macrosses_list.admins, true) then
+                sampSendChat('/admins')
+                wait(300)
+            
+            elseif isKeysDown(macrosses_list.find, true) then
+                if cfd ~= nil then sampSendChat('/find '..cfd) end
                 wait(300)
             end
-
-        elseif isKeysDown(macrosses_list.boot, true) and not sampIsChatInputActive() then
-            goKeyPressed(78)
-            lua_thread.create(function ()
-                while not sampTextdrawIsExists(2202) do wait(0) end
-                sampSendClickTextdraw(2202)
-                while not sampTextdrawIsExists(2176) do wait(0) end
-                sampSendClickTextdraw(2176)
-                while not sampIsDialogActive(899) do wait(0) end
-                sampSendDialogResponse(899, 1, 1, -1)
-                while not sampIsDialogActive(547) do wait(0) end
-                if lastknocked ~= nil then sampSendDialogResponse(547, 1, 1, lastknocked) sampCloseCurrentDialogWithButton(1) end
-            end)
-            wait(300)
-
-        elseif isKeysDown(macrosses_list.members, true) and not sampIsChatInputActive() then
-            sampSendChat('/members')
-            wait(300)
-
-        elseif isKeysDown(macrosses_list.contracts, true) and not sampIsChatInputActive() then
-            sampSendChat('/contractas')
-            wait(300)
-
-        elseif isKeysDown(macrosses_list.cancel, true) and not sampIsChatInputActive() then
-            sampSendChat('/cancel')
-            wait(300)
-
-        elseif isKeysDown(macrosses_list.getct, true) and not sampIsChatInputActive() then
-            if lastct_instream ~= nil then
-                sampSendChat('/goc '..lastct_instream)
-            end
-            wait(300)
-
-        elseif isKeysDown(macrosses_list.myc, true) and not sampIsChatInputActive() then
-            sampSendChat('/myc')
-            wait(300)
-
-        elseif isKeysDown(macrosses_list.invis, true) and not sampIsChatInputActive() then
-            sampSendChat('/hmenu')
-            incInvis = true
-            wait(300)
-
-        elseif isKeysDown(macrosses_list.otstrel, true) and not sampIsChatInputActive() then
-            openOtstrelList()
-            wait(300)
-
-        elseif isKeysDown(macrosses_list.admins, true) and not sampIsChatInputActive() then
-            sampSendChat('/admins')
-            wait(300)
         end
     end
 end
@@ -1422,8 +1432,9 @@ function dialogFunc()
             if listitem == 9 then setting_bind = 'invis' end
             if listitem == 10 then setting_bind = 'otstrel' end
             if listitem == 11 then setting_bind = 'admins' end
-            if listitem == 12 then setting_bind = 'screen' end
-            if listitem == 13 then setting_bind = 'setting' end
+            if listitem == 12 then setting_bind = 'find' end
+            if listitem == 13 then setting_bind = 'screen' end
+            if listitem == 14 then setting_bind = 'setting' end
             lockPlayerControl(true)
         end     
     end
@@ -1562,8 +1573,9 @@ function dialogFunc()
             if listitem == 2 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
             if listitem == 3 then mainIni.config.cstream = not mainIni.config.cstream end
             if listitem == 4 then mainIni.config.metka = not mainIni.config.metka end
-            if listitem == 5 then mainIni.config.without_screen = not mainIni.config.without_screen end
-            if listitem == 6 then
+            if listitem == 5 then mainIni.config.autofind = not mainIni.config.autofind end
+            if listitem == 6 then mainIni.config.without_screen = not mainIni.config.without_screen end
+            if listitem == 7 then
                 mainIni.config.otstrel = not mainIni.config.otstrel
                 if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
                     local f = io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'w')
@@ -1575,26 +1587,26 @@ function dialogFunc()
                     loadOtstrelList(1)
                 end
             end
-            if listitem == 7 then 
+            if listitem == 8 then 
 				mainIni.config.ooc_only = not mainIni.config.ooc_only
 				if mainIni.config.ooc_only then sampAddChatMessage('Вы включили OOC-чат по умолчанию. Для использования IC чата, введите ">" перед сообщением.', 0xCCCCCC) end
 			end
-            if listitem == 8 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
-            if listitem == 9 then mainIni.config.hud = not mainIni.config.hud end
-            if listitem == 10 then mainIni.config.customctstr = not mainIni.config.customctstr end
-            if listitem == 11 then mainIni.config.automobile = not mainIni.config.automobile end
-            if listitem == 12 then mainIni.config.autofill = not mainIni.config.autofill end
-            if listitem == 13 then mainIni.config.customid = not mainIni.config.customid end
-            if listitem == 14 then mainIni.config.s_speed = not mainIni.config.s_speed end
-            if listitem == 15 then
+            if listitem == 9 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
+            if listitem == 10 then mainIni.config.hud = not mainIni.config.hud end
+            if listitem == 11 then mainIni.config.customctstr = not mainIni.config.customctstr end
+            if listitem == 12 then mainIni.config.automobile = not mainIni.config.automobile end
+            if listitem == 13 then mainIni.config.autofill = not mainIni.config.autofill end
+            if listitem == 14 then mainIni.config.customid = not mainIni.config.customid end
+            if listitem == 15 then mainIni.config.s_speed = not mainIni.config.s_speed end
+            if listitem == 16 then
                 chatSettings()
                 openMenu = false
             end
-            if listitem == 16 then
+            if listitem == 17 then
                 anonymizerSettings()
                 openMenu = false
             end
-            if listitem == 17 then
+            if listitem == 18 then
                 local weapon_line
                 for k, v in pairs(weapons_list) do
                     weapon_line = (weapon_line == nil and 'Текущее название оружия\tНовое значение\n'..v..'\t>>\n' or weapon_line..v..'\t>>\n')
@@ -1602,17 +1614,17 @@ function dialogFunc()
                 sampShowDialog(D_GSETTING_ONE, 'Настройка', weapon_line, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
                 openMenu = false
             end
-            if listitem == 18 then
+            if listitem == 19 then
                 sampAddChatMessage('[ Hitman Helper ]: Перемещайте курсор для установки нового положения кастомного худа', 0xCCCCCC)
                 sampAddChatMessage('[ Hitman Helper ]: ЛКМ - установить новое положение | ПКМ - вернуть изначальное положение', 0xCCCCCC)
                 hud_move = true
                 openMenu = false
             end
-            if listitem == 19 then
+            if listitem == 20 then
                 showSettingMacrosses()
                 openMenu = false
             end
-            if listitem == 20 then
+            if listitem == 21 then
                 sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
                 sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
                 sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
@@ -1934,16 +1946,18 @@ function scriptBody()
     end
 
     if cfd ~= nil then
-        if (os.clock() - time_find >= 4) and (cfd ~= nil) then
-            if thispp or mainIni.config.search_other_servers then
-                sampSendChat('/find '..cfd)
+        if mainIni.config.autofind then
+            if (os.clock() - time_find >= 4) and (cfd ~= nil) then
+                if thispp or mainIni.config.search_other_servers then
+                    sampSendChat('/find '..cfd)
+                end
+                time_find = os.clock()
             end
-            time_find = os.clock()
         end
 
         if not sampIsPlayerConnected(cfd) then
             cfd = nil
-            sampAddChatMessage('[ Мысли ]: Преследование прекращено.', 0xCCCCCC)
+            --sampAddChatMessage('[ Мысли ]: Преследование прекращено.', 0xCCCCCC)
         end
     end
 end
