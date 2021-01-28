@@ -68,7 +68,7 @@ local D_AGENTSTATS_MAIN = 5124 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 5125 -- диалог для просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 5126 -- диалог для просмотра работоспособности агента (3)
 
-local script_version = 39 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 40 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.7' -- версия для вывода в окне настроек, не изменять
 
@@ -117,7 +117,8 @@ function main()
             hud = true,
             points_ammo = 1,
             points_contracts = 2,
-            points_otstrel = 3
+            points_otstrel = 3,
+            points_otstrel_squad = 3.5
         },
 
         otstrel_list = {
@@ -695,7 +696,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
         if playerid == id and last_contract ~= v.name then
             if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
                 sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
-                table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name)
+                table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name..','..(otstrel_squad and 1 or 0))
                 if mainIni.config.autoscreen then screenct() end
                 if playerid == cfd then cfd = nil end
                 if v.name == sampGetPlayerNickname(playerid) then
@@ -1338,6 +1339,16 @@ function scriptMenu()
     sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{cccccc}Моя работоспособность\n{ffffff}Авто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Контракты в зоне стрима\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на игроке в [/cfd]\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\nПостоянный поиск игрока в [/cfd]\t'..(mainIni.config.autofind and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока в [/cfd] на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
+function statsMenu()
+    local points = 0
+    for _, line in pairs(mainIni.stats) do
+        local type, type_ots = tonumber(line:match('(%d-),')), nil
+        if type == 2 then type_ots = tonumber(line:match('(%d+)$')) == 1 and true or false end
+        points = points + (type == 1 and mainIni.config.points_contracts or (type == 2 and (type_ots and mainIni.config.points_otstrel_squad or mainIni.config.points_otstrel) or mainIni.config.points_ammo))
+    end
+    sampShowDialog(D_AGENTSTATS_MAIN, 'Моя работоспособность ['..os.date('%d.%m.%Y')..']', 'Тип\tЗначение\n{cccccc}Суммарное количество набранных баллов:\t{0088FF}'..points..'{FFFFFF}\n{cccccc}Тип работы отстрела:\t'..'{cccccc}'..(otstrel_squad and 'Squad' or 'Solo')..'\nИнформация о выполненных контрактах\nИнформация о работе отстрела\nИнформация о доставленных боеприпасах\nНастройка баллов\n{cccccc}Очистить свою работоспособность', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+end
+
 function macrossesFunc()
     if mainIni.config.macrosses then
         if not sampIsChatInputActive() then
@@ -1568,12 +1579,7 @@ function dialogFunc()
                 openMenu = false
             end
             if listitem == 1 then
-                local points = 0
-                for _, line in pairs(mainIni.stats) do
-                    local type = tonumber(line:match('(%d-),'))
-                    points = points + (type == 1 and mainIni.config.points_contracts or (type == 2 and mainIni.config.points_otstrel or mainIni.config.points_ammo))
-                end
-                sampShowDialog(D_AGENTSTATS_MAIN, 'Моя работоспособность ['..os.date('%d.%m.%Y')..']', 'Тип\tЗначение\n{cccccc}Суммарное количество набранных баллов:\t{0088FF}'..points..'{FFFFFF}\nИнформация о выполненных контрактах\nИнформация о работе отстрела\nИнформация о доставленных боеприпасах\nНастройка баллов\n{cccccc}Очистить свою работоспособность', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+                statsMenu()
                 openMenu = false
             end
             if listitem == 2 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
@@ -1691,7 +1697,7 @@ function dialogFunc()
     local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_INFO)
     if result and button == 1 then
         if listitem ~= 0 then
-            local dialog_text, array = ((agentstats_type == 1 or agentstats_type == 2) and 'Время\tНикнейм\tУрон\tОружие\n' or 'Время\tБоеприпасы\n'), {}
+            local dialog_text, array = (agentstats_type == 1 and 'Время\tНикнейм\tОружие\n' or (agentstats_type == 2 and 'Время\tНикнейм\tОружие\tТип\n' or 'Время\tБоеприпасы\n')), {}
             for _, line in pairs(mainIni.stats) do
                 local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
                 if type == agentstats_type then
@@ -1711,16 +1717,23 @@ function dialogFunc()
                 if listitem == item then
                     for _, line in pairs(mainIni.stats) do
                         local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
-                        local ammo, time, nickname, damage, weapon
-                        if type == 3 then
-                            ammo, time = line:match('.-,(.-),(.+)')
-                        else
+                        local ammo, time, nickname, damage, weapon, type_ots
+
+                        if type == 1 then
                             time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.+)')
+                        elseif type == 2 then
+                            time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.-),')
+                            type_ots = tonumber(line:match('(%d+)$')) == 1 and true or false
+                        elseif type == 3 then
+                            ammo, time = line:match('.-,(.-),(.+)')
                         end
+
                         if type == agentstats_type and os.date('%d.%m.%Y', date) == os.date('%d.%m.%Y', v) then
                             g_date = os.date('%d.%m.%Y', date)
-                            if agentstats_type == 1 or agentstats_type == 2 then
-                                dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t{FF6347}- '..damage..'HP{ffffff}\t'..weapon..'\n'
+                            if agentstats_type == 1 then
+                                dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\n'
+                            elseif agentstats_type == 2 then
+                                dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\t'..(type_ots and 'Squad' or 'Solo')..'\n'
                             elseif agentstats_type == 3 then
                                 dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t{FF6347}'..u8:decode(ammo)..'{FFFFFF}\n'
                             end
@@ -1736,10 +1749,10 @@ function dialogFunc()
     local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_POINTS)
     if result and button == 1 then
         if sampGetDialogText():find('Введите новое значение баллов') then
-            mainIni['config'][agentstats_points] = input   
-            sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела:\t\t'..mainIni.config.points_otstrel..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+            mainIni['config'][agentstats_points] = tonumber(input)  
+            sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела [SOLO]:\t'..mainIni.config.points_otstrel..'\nБаллы за работу отстрела [SQUAD]:\t'..mainIni.config.points_otstrel_squad..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
         else
-            agentstats_points = (listitem == 0 and 'points_contracts' or (listitem == 1 and 'points_otstrel' or 'points_ammo'))
+            agentstats_points = (listitem == 0 and 'points_contracts' or (listitem == 1 and 'points_otstrel' or (listitem == 2 and 'points_otstrel_squad' or 'points_ammo')))
             sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Введите новое значение баллов:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
         end
     end
@@ -1750,19 +1763,23 @@ function dialogFunc()
             mainIni.stats = {}
             sampAddChatMessage('[ Hitman Helper ]: Ваша работоспособность была очищена.', 0xCCCCCC)
         else
-            if listitem == 1 then -- Информация о выполненных контрактах
+            if listitem == 1 then -- Смена типа работы отстрела (Solo/Squad)
+                otstrel_squad = not otstrel_squad
+                statsMenu()
+            end
+            if listitem == 2 then -- Информация о выполненных контрактах
                 showAgentStats(1)
             end
-            if listitem == 2 then -- Информация о работе отстрела
+            if listitem == 3 then -- Информация о работе отстрела
                 showAgentStats(2)
             end
-            if listitem == 3 then -- Информация о доставленных боеприпасах
+            if listitem == 4 then -- Информация о доставленных боеприпасах
                 showAgentStats(3)
             end
-            if listitem == 4 then
-                sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела:\t\t'..mainIni.config.points_otstrel..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
-            end
             if listitem == 5 then
+                sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела [SOLO]:\t'..mainIni.config.points_otstrel..'\nБаллы за работу отстрела [SQUAD]:\t'..mainIni.config.points_otstrel_squad..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+            end
+            if listitem == 6 then
                 sampShowDialog(D_AGENTSTATS_MAIN, 'Предупреждение', 'При очистке вашей работоспособности, восстановить её уже не получится.\nВы уверены, что желаете это сделать?', 'Да', 'Нет', DIALOG_STYLE_MSGBOX)
             end
         end
