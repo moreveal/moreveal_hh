@@ -68,7 +68,7 @@ local D_AGENTSTATS_MAIN = 5124 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 5125 -- диалог для просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 5126 -- диалог для просмотра работоспособности агента (3)
 
-local script_version = 40 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 41 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.7' -- версия для вывода в окне настроек, не изменять
 
@@ -117,8 +117,8 @@ function main()
             hud = true,
             points_ammo = 1,
             points_contracts = 2,
-            points_otstrel = 3,
-            points_otstrel_squad = 3.5
+            points_otstrel = 3.5,
+            points_otstrel_squad = 3
         },
 
         otstrel_list = {
@@ -256,7 +256,6 @@ function main()
     end
     f:close()
 
-
     repeat wait(0) until sampIsLocalPlayerSpawned() and isCharOnScreen(PLAYER_PED)
 
     if mainIni.config.anonymizer then
@@ -328,6 +327,10 @@ function main()
         sampSendChat('/stats')
     end
 
+    lua_thread.create(scriptBody)
+    lua_thread.create(dialogFunc)
+    lua_thread.create(macrossesFunc)
+
     sampRegisterChatCommand('autogoc', function(price)
         if #price ~= 0 and not price:find('%D') then
             autogoc_price = tonumber(price)
@@ -381,13 +384,6 @@ function main()
     while true do
         wait(0)
 
-        if isKeysDown(macrosses_list.setting, true) and not isPauseMenuActive() and not sampIsChatInputActive() and not sampIsDialogActive() then
-            scriptMenu()
-        end
-
-        dialogFunc()
-        macrossesFunc()
-
         if setting_bind ~= nil then
             local sw, sh = getScreenResolution()
             renderFontDrawText(font, "Изменение макроса. Поочередно нажимайте клавиши:", sw / 2 - renderGetFontDrawTextLength(font, "Изменение макроса. Поочерёдно нажимайте клавиши:") / 2, sh / 2, 0xFFFFFFFF, true)
@@ -424,22 +420,6 @@ function main()
             if isKeyJustPressed(0x74) then
                 sampAddChatMessage('[ Hitman Helper ]: Вы вышли из режима тестирования авто-скриншота', 0xCCCCCC)
                 test_as = false
-            end
-        end
-
-        if isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C) then
-            pressed_screen = true
-        else
-            pressed_screen = false
-        end
-
-        if not pressed_screen then
-            scriptBody()
-        else
-            if not mainIni.config.without_screen then
-                if not isKeyDown(0x74) then
-                    scriptBody()
-                end
             end
         end
     end
@@ -552,12 +532,16 @@ function loadOtstrelList(type)
     f:close()]]
 
     otstrel_list = {}
-    local response = requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/otstrel_list')
-    for name in response.text:gmatch('[^\r\n]+') do table.insert(otstrel_list, {name = name}) end
+    --[[local response = requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/otstrel_list')
+    for name in response.text:gmatch('[^\r\n]+') do table.insert(otstrel_list, {name = name}) end]]
+    local f = io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'r+')
+    for name in f:lines() do table.insert(otstrel_list, {name = name}) end
+    f:close()
 
     if type == 1 and mainIni.config.otstrel then
-        local count = 0
+        local count, count_online = 0, 0
         for k, v in pairs(otstrel_list) do
+            count = count + 1
             for s, t in pairs(mainIni.otstrel_list) do 
                 if s == v.name then 
                     v.time = t
@@ -567,10 +551,10 @@ function loadOtstrelList(type)
 
             local id = sampGetPlayerIdByNickname(v.name)
             if id ~= -1 then
-                count = count + 1
+                count_online = count_online + 1
             end
         end
-        sampAddChatMessage('[ Отстрел ]: В сети найдено '..count..' человек из списка.', 0xCCCCCC)
+        sampAddChatMessage('[ Отстрел ]: Всего в списке: '..count..'. В сети найдено: '..count_online..'.', 0xCCCCCC)
     end
 end
 
@@ -1350,437 +1334,449 @@ function statsMenu()
 end
 
 function macrossesFunc()
-    if mainIni.config.macrosses then
-        if not sampIsChatInputActive() then
-            if isKeysDown(macrosses_list.knock, true) then
-                if tonumber(sampGetNearestPlayer()) ~= -1 then
-                    sampSendChat("/ko " .. sampGetNearestPlayer())
+    while true do
+        wait(0)
+
+        if isKeysDown(macrosses_list.setting, true) and not isPauseMenuActive() and not sampIsChatInputActive() and not sampIsDialogActive() then
+            scriptMenu()
+        end
+
+        if mainIni.config.macrosses then
+            if not sampIsChatInputActive() then
+                if isKeysDown(macrosses_list.knock, true) then
+                    if tonumber(sampGetNearestPlayer()) ~= -1 then
+                        sampSendChat("/ko " .. sampGetNearestPlayer())
+                        wait(300)
+                    end
+
+                elseif isKeysDown(macrosses_list.boot, true) and lastknocked ~= nil then
+                    goKeyPressed(78)
+                    lua_thread.create(function ()
+                        while not sampTextdrawIsExists(2202) do wait(0) end
+                        sampSendClickTextdraw(2202)
+                        while not sampTextdrawIsExists(2176) do wait(0) end
+                        sampSendClickTextdraw(2176)
+                        while not sampIsDialogActive(899) do wait(0) end
+                        sampSendDialogResponse(899, 1, 1, -1)
+                        while not sampIsDialogActive(547) do wait(0) end
+                        sampSendDialogResponse(547, 1, 1, lastknocked) sampCloseCurrentDialogWithButton(1)
+                    end)
+                    wait(300)
+
+                elseif isKeysDown(macrosses_list.members, true) then
+                    sampSendChat('/members')
+                    wait(300)
+
+                elseif isKeysDown(macrosses_list.contracts, true) then
+                    sampSendChat('/contractas')
+                    wait(300)
+
+                elseif isKeysDown(macrosses_list.cancel, true) then
+                    sampSendChat('/cancel')
+                    wait(300)
+
+                elseif isKeysDown(macrosses_list.getct, true) then
+                    if lastct_instream ~= nil then
+                        sampSendChat('/goc '..lastct_instream)
+                    end
+                    wait(300)
+
+                elseif isKeysDown(macrosses_list.myc, true) then
+                    sampSendChat('/myc')
+                    wait(300)
+
+                elseif isKeysDown(macrosses_list.invis, true) then
+                    sampSendChat('/hmenu')
+                    incInvis = true
+                    wait(300)
+
+                elseif isKeysDown(macrosses_list.otstrel, true) then
+                    openOtstrelList()
+                    wait(300)
+
+                elseif isKeysDown(macrosses_list.admins, true) then
+                    sampSendChat('/admins')
+                    wait(300)
+                
+                elseif isKeysDown(macrosses_list.find, true) then
+                    if cfd ~= nil then sampSendChat('/find '..cfd) end
                     wait(300)
                 end
-
-            elseif isKeysDown(macrosses_list.boot, true) then
-                goKeyPressed(78)
-                lua_thread.create(function ()
-                    while not sampTextdrawIsExists(2202) do wait(0) end
-                    sampSendClickTextdraw(2202)
-                    while not sampTextdrawIsExists(2176) do wait(0) end
-                    sampSendClickTextdraw(2176)
-                    while not sampIsDialogActive(899) do wait(0) end
-                    sampSendDialogResponse(899, 1, 1, -1)
-                    while not sampIsDialogActive(547) do wait(0) end
-                    if lastknocked ~= nil then sampSendDialogResponse(547, 1, 1, lastknocked) sampCloseCurrentDialogWithButton(1) end
-                end)
-                wait(300)
-
-            elseif isKeysDown(macrosses_list.members, true) then
-                sampSendChat('/members')
-                wait(300)
-
-            elseif isKeysDown(macrosses_list.contracts, true) then
-                sampSendChat('/contractas')
-                wait(300)
-
-            elseif isKeysDown(macrosses_list.cancel, true) then
-                sampSendChat('/cancel')
-                wait(300)
-
-            elseif isKeysDown(macrosses_list.getct, true) then
-                if lastct_instream ~= nil then
-                    sampSendChat('/goc '..lastct_instream)
-                end
-                wait(300)
-
-            elseif isKeysDown(macrosses_list.myc, true) then
-                sampSendChat('/myc')
-                wait(300)
-
-            elseif isKeysDown(macrosses_list.invis, true) then
-                sampSendChat('/hmenu')
-                incInvis = true
-                wait(300)
-
-            elseif isKeysDown(macrosses_list.otstrel, true) then
-                openOtstrelList()
-                wait(300)
-
-            elseif isKeysDown(macrosses_list.admins, true) then
-                sampSendChat('/admins')
-                wait(300)
-            
-            elseif isKeysDown(macrosses_list.find, true) then
-                if cfd ~= nil then sampSendChat('/find '..cfd) end
-                wait(300)
             end
         end
     end
 end
 
 function dialogFunc()
-    local result, button, listitem, input = sampHasDialogRespond(D_MSETTING)
-    if result and button == 1 then
-        if listitem == 0 or listitem == 1 then
-            if listitem == 0 then
-                mainIni.config.macrosses = not mainIni.config.macrosses
-                showSettingMacrosses()
-            end
-            if listitem == 1 then
-                macrosses_list.knock = {164, 221}
-                macrosses_list.boot = {164, 219}
-                macrosses_list.members = {164, 186}
-                macrosses_list.contracts = {164, 222}
-                macrosses_list.cancel = {164, 190}
-                macrosses_list.getct = {190, 191}
-                macrosses_list.myc = {164, 188}
-                macrosses_list.invis = {88, 90}
-                macrosses_list.otstrel = {164, 76}
-                macrosses_list.admins = {164, 75}
-                macrosses_list.setting = {35}
-                macrosses_list.screen = {18, 90}
-                showSettingMacrosses()
-            end
-        else
-            if listitem == 2 then setting_bind = 'knock' end
-            if listitem == 3 then setting_bind = 'boot' end
-            if listitem == 4 then setting_bind = 'members' end
-            if listitem == 5 then setting_bind = 'contracts' end
-            if listitem == 6 then setting_bind = 'cancel' end
-            if listitem == 7 then setting_bind = 'getct' end
-            if listitem == 8 then setting_bind = 'myc' end
-            if listitem == 9 then setting_bind = 'invis' end
-            if listitem == 10 then setting_bind = 'otstrel' end
-            if listitem == 11 then setting_bind = 'admins' end
-            if listitem == 12 then setting_bind = 'find' end
-            if listitem == 13 then setting_bind = 'screen' end
-            if listitem == 14 then setting_bind = 'setting' end
-            lockPlayerControl(true)
-        end     
-    end
+    while true do
+        wait(0)
 
-    local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_ONE)
-    if result and button == 1 then
-        local openMenu = true
-        if listitem == 0 then
-            mainIni.config.anonymizer = not mainIni.config.anonymizer
-            if mainIni.config.anonymizer then
-                for k, v in pairs(anonymizer_names) do
-                    local name = v:match('(.+) =')
-                    local mask = v:match('= (.+)')
-                    if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampIsPlayerConnected(sampGetPlayerIdByNickname(name)) then
-                        changeName(name, mask)
-                    end
+        local result, button, listitem, input = sampHasDialogRespond(D_MSETTING)
+        if result and button == 1 then
+            if listitem == 0 or listitem == 1 then
+                if listitem == 0 then
+                    mainIni.config.macrosses = not mainIni.config.macrosses
+                    showSettingMacrosses()
+                end
+                if listitem == 1 then
+                    macrosses_list.knock = {164, 221}
+                    macrosses_list.boot = {164, 219}
+                    macrosses_list.members = {164, 186}
+                    macrosses_list.contracts = {164, 222}
+                    macrosses_list.cancel = {164, 190}
+                    macrosses_list.getct = {190, 191}
+                    macrosses_list.myc = {164, 188}
+                    macrosses_list.invis = {88, 90}
+                    macrosses_list.otstrel = {164, 76}
+                    macrosses_list.admins = {164, 75}
+                    macrosses_list.setting = {35}
+                    macrosses_list.screen = {18, 90}
+                    showSettingMacrosses()
                 end
             else
-                for k, v in pairs(anonymizer_names) do
-                    local name = v:match('(.+) =')
-                    local mask = v:match('= (.+)')
-                    if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == mask or sampIsPlayerConnected(sampGetPlayerIdByNickname(mask)) then
-                        changeName(mask, name)
+                if listitem == 2 then setting_bind = 'knock' end
+                if listitem == 3 then setting_bind = 'boot' end
+                if listitem == 4 then setting_bind = 'members' end
+                if listitem == 5 then setting_bind = 'contracts' end
+                if listitem == 6 then setting_bind = 'cancel' end
+                if listitem == 7 then setting_bind = 'getct' end
+                if listitem == 8 then setting_bind = 'myc' end
+                if listitem == 9 then setting_bind = 'invis' end
+                if listitem == 10 then setting_bind = 'otstrel' end
+                if listitem == 11 then setting_bind = 'admins' end
+                if listitem == 12 then setting_bind = 'find' end
+                if listitem == 13 then setting_bind = 'screen' end
+                if listitem == 14 then setting_bind = 'setting' end
+                lockPlayerControl(true)
+            end     
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_ONE)
+        if result and button == 1 then
+            local openMenu = true
+            if listitem == 0 then
+                mainIni.config.anonymizer = not mainIni.config.anonymizer
+                if mainIni.config.anonymizer then
+                    for k, v in pairs(anonymizer_names) do
+                        local name = v:match('(.+) =')
+                        local mask = v:match('= (.+)')
+                        if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampIsPlayerConnected(sampGetPlayerIdByNickname(name)) then
+                            changeName(name, mask)
+                        end
+                    end
+                else
+                    for k, v in pairs(anonymizer_names) do
+                        local name = v:match('(.+) =')
+                        local mask = v:match('= (.+)')
+                        if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == mask or sampIsPlayerConnected(sampGetPlayerIdByNickname(mask)) then
+                            changeName(mask, name)
+                        end
                     end
                 end
+                sampAddChatMessage('[ Мысли ]: Я '..(mainIni.config.anonymizer and 'включил' or 'выключил')..' анонимайзер', 0xCCCCCC)
             end
-            sampAddChatMessage('[ Мысли ]: Я '..(mainIni.config.anonymizer and 'включил' or 'выключил')..' анонимайзер', 0xCCCCCC)
+            if listitem == 1 then
+                sampShowDialog(D_ASETTING_TWO, 'Добавление/редактирование маски', 'Введите ник игрока и маску для него\n{cccccc}Требуемый формат:{cccccc} Nick_Name = Mask', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
+                openMenu = false
+            end
+            if listitem == 2 then
+                sampShowDialog(D_ASETTING_THREE, 'Удаление маски', 'Введите часть ника, или часть маски, для того, чтобы удалить запись:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
+                openMenu = false
+            end
+            if openMenu then anonymizerSettings() end
         end
-        if listitem == 1 then
-            sampShowDialog(D_ASETTING_TWO, 'Добавление/редактирование маски', 'Введите ник игрока и маску для него\n{cccccc}Требуемый формат:{cccccc} Nick_Name = Mask', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
-            openMenu = false
-        end
-        if listitem == 2 then
-            sampShowDialog(D_ASETTING_THREE, 'Удаление маски', 'Введите часть ника, или часть маски, для того, чтобы удалить запись:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
-            openMenu = false
-        end
-        if openMenu then anonymizerSettings() end
-    end
 
-    local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_TWO)
-    if result and button == 1 then
-        if not input:find('.+ = .+') then
-            sampAddChatMessage('[ Мысли ]: Я должен ввести ник и маску в требуемом формате: Nick_Name = Mask', 0xCCCCCC)
-            sampShowDialog(D_ASETTING_TWO, 'Добавление/редактирование маски', 'Введите ник игрока и маску для него\n{ff0000}Требуемый формат:{cccccc} Nick_Name = Mask', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
-        else
-            local retry
+        local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_TWO)
+        if result and button == 1 then
+            if not input:find('.+ = .+') then
+                sampAddChatMessage('[ Мысли ]: Я должен ввести ник и маску в требуемом формате: Nick_Name = Mask', 0xCCCCCC)
+                sampShowDialog(D_ASETTING_TWO, 'Добавление/редактирование маски', 'Введите ник игрока и маску для него\n{ff0000}Требуемый формат:{cccccc} Nick_Name = Mask', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
+            else
+                local retry
+                for k, v in pairs(anonymizer_names) do
+                    if input:find(v:match('(.+) =')) or input:find(v:match('= (.+)')) then
+                        retry = true
+                        break
+                    end
+                end
+                if not retry then
+                    table.insert(anonymizer_names, input)
+                    sampAddChatMessage('[ Мысли ]: Запись "'..input..'" успешно создана', 0xCCCCCC)
+                    if mainIni.config.anonymizer then
+                        local name = input:match('(.+) =')
+                        local mask = input:match('= (.+)')
+                        local localid = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
+                        if sampGetPlayerNickname(localid) == name or sampGetPlayerIdByNickname(name) ~= -1 then
+                            changeName(name, mask)
+                        end
+                    end
+                else
+                    sampAddChatMessage('[ Мысли ]: Никнеймы и маски не должны повторяться. Сперва я должен удалить старую запись', 0xCCCCCC)
+                end
+            end
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_THREE)
+        if result and button == 1 then
+            local delete
             for k, v in pairs(anonymizer_names) do
-                if input:find(v:match('(.+) =')) or input:find(v:match('= (.+)')) then
-                    retry = true
+                if v:find(input) then
+                    delete = v
+                    table.remove(anonymizer_names, k)
                     break
                 end
             end
-            if not retry then
-                table.insert(anonymizer_names, input)
-                sampAddChatMessage('[ Мысли ]: Запись "'..input..'" успешно создана', 0xCCCCCC)
-                if mainIni.config.anonymizer then
-                    local name = input:match('(.+) =')
-                    local mask = input:match('= (.+)')
-                    local localid = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
-                    if sampGetPlayerNickname(localid) == name or sampGetPlayerIdByNickname(name) ~= -1 then
-                        changeName(name, mask)
-                    end
+            if delete ~= nil then
+                sampAddChatMessage('[ Мысли ]: Запись "'..delete..'" успешно удалена', 0xCCCCCC)
+                local name = delete:match('(.+) =')
+                local mask = delete:match('= (.+)')
+                if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampGetPlayerIdByNickname(mask) ~= -1 then
+                    changeName(mask, name)
                 end
             else
-                sampAddChatMessage('[ Мысли ]: Никнеймы и маски не должны повторяться. Сперва я должен удалить старую запись', 0xCCCCCC)
+                sampAddChatMessage('[ Мысли ]: Запись по запросу "'..input..'" не обнаружена', 0xCCCCCC)
             end
         end
-    end
 
-    local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_THREE)
-    if result and button == 1 then
-        local delete
-        for k, v in pairs(anonymizer_names) do
-            if v:find(input) then
-                delete = v
-                table.remove(anonymizer_names, k)
-                break
+        local result, button, listitem, input = sampHasDialogRespond(D_SETCOLOR)
+        if result then
+            if button == 1 then
+                sampSendChat('/setcolor '..listitem + 1)
             end
         end
-        if delete ~= nil then
-            sampAddChatMessage('[ Мысли ]: Запись "'..delete..'" успешно удалена', 0xCCCCCC)
-            local name = delete:match('(.+) =')
-            local mask = delete:match('= (.+)')
-            if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampGetPlayerIdByNickname(mask) ~= -1 then
-                changeName(mask, name)
-            end
-        else
-            sampAddChatMessage('[ Мысли ]: Запись по запросу "'..input..'" не обнаружена', 0xCCCCCC)
-        end
-    end
 
-    local result, button, listitem, input = sampHasDialogRespond(D_SETCOLOR)
-    if result then
-        if button == 1 then
-            sampSendChat('/setcolor '..listitem + 1)
-        end
-    end
+        local result, button, listitem, input = sampHasDialogRespond(D_CSETTING)
+        if result then
+            if button == 1 then
+                if listitem == 0 then mainIni.chat.misli = not mainIni.chat.misli end
+                if listitem == 1 then mainIni.chat.p_adm = not mainIni.chat.p_adm end
+                if listitem == 2 then mainIni.chat.frac = not mainIni.chat.frac end
+                if listitem == 3 then mainIni.chat.fam = not mainIni.chat.fam end
+                if listitem == 4 then mainIni.chat.ads = not mainIni.chat.ads end
+                if listitem == 5 then mainIni.chat.invites = not mainIni.chat.invites end
+                if listitem == 6 then mainIni.chat.gos_ads = not mainIni.chat.gos_ads end
+                if listitem == 7 then mainIni.chat.a_adm = not mainIni.chat.a_adm end
+                if listitem == 8 then mainIni.chat.news_cnn = not mainIni.chat.news_cnn end
+                if listitem == 9 then mainIni.chat.news_sekta = not mainIni.chat.news_sekta end
+                if listitem == 10 then mainIni.chat.hit_ads = not mainIni.chat.hit_ads end
+                if listitem == 11 then mainIni.chat.propose = not mainIni.chat.propose end
 
-    local result, button, listitem, input = sampHasDialogRespond(D_CSETTING)
-    if result then
-        if button == 1 then
-            if listitem == 0 then mainIni.chat.misli = not mainIni.chat.misli end
-            if listitem == 1 then mainIni.chat.p_adm = not mainIni.chat.p_adm end
-            if listitem == 2 then mainIni.chat.frac = not mainIni.chat.frac end
-            if listitem == 3 then mainIni.chat.fam = not mainIni.chat.fam end
-            if listitem == 4 then mainIni.chat.ads = not mainIni.chat.ads end
-            if listitem == 5 then mainIni.chat.invites = not mainIni.chat.invites end
-            if listitem == 6 then mainIni.chat.gos_ads = not mainIni.chat.gos_ads end
-            if listitem == 7 then mainIni.chat.a_adm = not mainIni.chat.a_adm end
-            if listitem == 8 then mainIni.chat.news_cnn = not mainIni.chat.news_cnn end
-            if listitem == 9 then mainIni.chat.news_sekta = not mainIni.chat.news_sekta end
-            if listitem == 10 then mainIni.chat.hit_ads = not mainIni.chat.hit_ads end
-            if listitem == 11 then mainIni.chat.propose = not mainIni.chat.propose end
-
-            chatSettings()
-        end
-    end
-
-    local result, button, listitem, input = sampHasDialogRespond(D_SETTING)
-    if result then
-        if button == 1 then
-            local openMenu = true
-            if listitem == 0 then
-                sampShowDialog(D_INVALID, 'Последние нововведения || Версия: '..text_version, changelog, '*', nil, DIALOG_STYLE_MSGBOX)
-                openMenu = false
-            end
-            if listitem == 1 then
-                statsMenu()
-                openMenu = false
-            end
-            if listitem == 2 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
-            if listitem == 3 then mainIni.config.cstream = not mainIni.config.cstream end
-            if listitem == 4 then mainIni.config.metka = not mainIni.config.metka end
-            if listitem == 5 then mainIni.config.autofind = not mainIni.config.autofind end
-            if listitem == 6 then mainIni.config.without_screen = not mainIni.config.without_screen end
-            if listitem == 7 then
-                mainIni.config.otstrel = not mainIni.config.otstrel
-                if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
-                    local f = io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'w')
-                    f:close()
-                end
-                if mainIni.config.otstrel then
-                    sampAddChatMessage('[ Hitman Helper ]: Вы включили чекер отстрела. Никнеймы людей из списка отстрела были загружены автоматически.', 0xCCCCCC)
-                    sampAddChatMessage('[ Hitman Helper ]: Для просмотра людей из списка отстрела в сети, используйте - {FF6347}/otstrel_list [ '..layoutMacrossString(macrosses_list.otstrel)..' ]', 0xCCCCCC)
-                    loadOtstrelList(1)
-                end
-            end
-            if listitem == 8 then 
-				mainIni.config.ooc_only = not mainIni.config.ooc_only
-				if mainIni.config.ooc_only then sampAddChatMessage('Вы включили OOC-чат по умолчанию. Для использования IC чата, введите ">" перед сообщением.', 0xCCCCCC) end
-			end
-            if listitem == 9 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
-            if listitem == 10 then mainIni.config.hud = not mainIni.config.hud end
-            if listitem == 11 then mainIni.config.customctstr = not mainIni.config.customctstr end
-            if listitem == 12 then mainIni.config.automobile = not mainIni.config.automobile end
-            if listitem == 13 then mainIni.config.autofill = not mainIni.config.autofill end
-            if listitem == 14 then mainIni.config.customid = not mainIni.config.customid end
-            if listitem == 15 then mainIni.config.s_speed = not mainIni.config.s_speed end
-            if listitem == 16 then
                 chatSettings()
-                openMenu = false
             end
-            if listitem == 17 then
-                anonymizerSettings()
-                openMenu = false
-            end
-            if listitem == 18 then
-                local weapon_line
-                for k, v in pairs(weapons_list) do
-                    weapon_line = (weapon_line == nil and 'Текущее название оружия\tНовое значение\n'..v..'\t>>\n' or weapon_line..v..'\t>>\n')
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_SETTING)
+        if result then
+            if button == 1 then
+                local openMenu = true
+                if listitem == 0 then
+                    sampShowDialog(D_INVALID, 'Последние нововведения || Версия: '..text_version, changelog, '*', nil, DIALOG_STYLE_MSGBOX)
+                    openMenu = false
                 end
-                sampShowDialog(D_GSETTING_ONE, 'Настройка', weapon_line, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
-                openMenu = false
-            end
-            if listitem == 19 then
-                sampAddChatMessage('[ Hitman Helper ]: Перемещайте курсор для установки нового положения кастомного худа', 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: ЛКМ - установить новое положение | ПКМ - вернуть изначальное положение', 0xCCCCCC)
-                hud_move = true
-                openMenu = false
-            end
-            if listitem == 20 then
-                showSettingMacrosses()
-                openMenu = false
-            end
-            if listitem == 21 then
-                sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
-                test_as = true
-                openMenu = false
-            end
-
-            if openMenu then scriptMenu() end
-        end
-    end
-
-    local result, button, listitem, input = sampHasDialogRespond(D_GSETTING_ONE)
-    if result and button == 1 then
-        local gun
-        if listitem <= 18 then
-            gun = weapons_list[listitem + 1]
-        else
-            gun = weapons_list[listitem + 3]
-        end
-        sampShowDialog(D_GSETTING_TWO, 'Настройка', 'Введите новое название для '..gun, 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
-    end
-
-    local result, button, listitem, input = sampHasDialogRespond(D_GSETTING_TWO)
-    if result and button == 1 then
-        local weapon_name = sampGetDialogText():match('название для (.+)')
-        local weapon_id
-        for k, v in pairs(weapons_list) do
-            if weapon_name == v then
-                weapon_id = k
-                break
-            end
-        end
-        weapons_list[weapon_id] = input
-        sampAddChatMessage('[ Мысли ]: Название оружия успешно изменено на "'..input..'"', 0xCCCCCC)
-    end
-
-    local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_ONE)
-    if result and button == 1 then
-        current_tempname = (listitem == 0 and 'otstrel' or (listitem == 1 and 'contracts' or 'trainings'))
-        sampShowDialog(D_TNSETTING_TWO, 'Взаимодействие', 'Установить\nРедактировать', 'Ок', 'Отмена', DIALOG_STYLE_LIST)
-    end
-
-    local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_TWO)
-    if result and button == 1 then
-        if listitem == 0 then
-            sampSendChat('/sign '..mainIni['tempname'][current_tempname])
-        elseif listitem == 1 then
-            sampShowDialog(D_TNSETTING_THREE, 'Редактирование', '{FFFFFF}Введите желаемый никнейм:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
-        end
-    end
-
-    local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_THREE)
-    if result and button == 1 then
-        mainIni['tempname'][current_tempname] = input
-        sampShowDialog(D_TNSETTING_ONE, ' ', 'Тип\tВременный никнейм\n{FF6347}Отстрел\t{FFFFFF}'..mainIni.tempname.otstrel..'\n{FF6347}Контракты\t{FFFFFF}'..mainIni.tempname.contracts..'\n{FF6347}Тренировки\t{FFFFFF}'..mainIni.tempname.trainings, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
-    end
-
-    local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_INFO)
-    if result and button == 1 then
-        if listitem ~= 0 then
-            local dialog_text, array = (agentstats_type == 1 and 'Время\tНикнейм\tОружие\n' or (agentstats_type == 2 and 'Время\tНикнейм\tОружие\tТип\n' or 'Время\tБоеприпасы\n')), {}
-            for _, line in pairs(mainIni.stats) do
-                local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
-                if type == agentstats_type then
-                    local found = false
-                    for k,v in pairs(array) do
-                        if os.date('%d.%m.%Y', v) == os.date('%d.%m.%Y', date) then
-                            found = true
-                            break
+                if listitem == 1 then
+                    statsMenu()
+                    openMenu = false
+                end
+                if listitem == 2 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
+                if listitem == 3 then mainIni.config.cstream = not mainIni.config.cstream end
+                if listitem == 4 then mainIni.config.metka = not mainIni.config.metka end
+                if listitem == 5 then mainIni.config.autofind = not mainIni.config.autofind end
+                if listitem == 6 then mainIni.config.without_screen = not mainIni.config.without_screen end
+                if listitem == 7 then
+                    mainIni.config.otstrel = not mainIni.config.otstrel
+                    if mainIni.config.otstrel then
+                        if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
+                            local f = io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'w')
+                            f:close()
                         end
-                    end
-                    if not found then
-                        table.insert(array, date)
+                        sampAddChatMessage('[ Hitman Helper ]: Вы включили чекер отстрела. Теперь необходимо заполнить список [/config/Hitman Helper/otstrel.txt]', 0xCCCCCC)
+                        sampAddChatMessage('[ Hitman Helper ]: Для просмотра людей из списка отстрела в сети, используйте - {FF6347}/otstrel_list [ '..layoutMacrossString(macrosses_list.otstrel)..' ]', 0xCCCCCC)
+                        loadOtstrelList(1)
                     end
                 end
+                if listitem == 8 then 
+                    mainIni.config.ooc_only = not mainIni.config.ooc_only
+                    if mainIni.config.ooc_only then sampAddChatMessage('Вы включили OOC-чат по умолчанию. Для использования IC чата, введите ">" перед сообщением.', 0xCCCCCC) end
+                end
+                if listitem == 9 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
+                if listitem == 10 then mainIni.config.hud = not mainIni.config.hud end
+                if listitem == 11 then mainIni.config.customctstr = not mainIni.config.customctstr end
+                if listitem == 12 then mainIni.config.automobile = not mainIni.config.automobile end
+                if listitem == 13 then mainIni.config.autofill = not mainIni.config.autofill end
+                if listitem == 14 then mainIni.config.customid = not mainIni.config.customid end
+                if listitem == 15 then mainIni.config.s_speed = not mainIni.config.s_speed end
+                if listitem == 16 then
+                    chatSettings()
+                    openMenu = false
+                end
+                if listitem == 17 then
+                    anonymizerSettings()
+                    openMenu = false
+                end
+                if listitem == 18 then
+                    local weapon_line
+                    for k, v in pairs(weapons_list) do
+                        weapon_line = (weapon_line == nil and 'Текущее название оружия\tНовое значение\n'..v..'\t>>\n' or weapon_line..v..'\t>>\n')
+                    end
+                    sampShowDialog(D_GSETTING_ONE, 'Настройка', weapon_line, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+                    openMenu = false
+                end
+                if listitem == 19 then
+                    sampAddChatMessage('[ Hitman Helper ]: Перемещайте курсор для установки нового положения кастомного худа', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: ЛКМ - установить новое положение | ПКМ - вернуть изначальное положение', 0xCCCCCC)
+                    hud_move = true
+                    openMenu = false
+                end
+                if listitem == 20 then
+                    showSettingMacrosses()
+                    openMenu = false
+                end
+                if listitem == 21 then
+                    sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
+                    sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
+                    test_as = true
+                    openMenu = false
+                end
+
+                if openMenu then scriptMenu() end
             end
-            for item, v in pairs(array) do
-                if listitem == item then
-                    for _, line in pairs(mainIni.stats) do
-                        local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
-                        local ammo, time, nickname, damage, weapon, type_ots
+        end
 
-                        if type == 1 then
-                            time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.+)')
-                        elseif type == 2 then
-                            time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.-),')
-                            type_ots = tonumber(line:match('(%d+)$')) == 1 and true or false
-                        elseif type == 3 then
-                            ammo, time = line:match('.-,(.-),(.+)')
+        local result, button, listitem, input = sampHasDialogRespond(D_GSETTING_ONE)
+        if result and button == 1 then
+            local gun
+            if listitem <= 18 then
+                gun = weapons_list[listitem + 1]
+            else
+                gun = weapons_list[listitem + 3]
+            end
+            sampShowDialog(D_GSETTING_TWO, 'Настройка', 'Введите новое название для '..gun, 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_GSETTING_TWO)
+        if result and button == 1 then
+            local weapon_name = sampGetDialogText():match('название для (.+)')
+            local weapon_id
+            for k, v in pairs(weapons_list) do
+                if weapon_name == v then
+                    weapon_id = k
+                    break
+                end
+            end
+            weapons_list[weapon_id] = input
+            sampAddChatMessage('[ Мысли ]: Название оружия успешно изменено на "'..input..'"', 0xCCCCCC)
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_ONE)
+        if result and button == 1 then
+            current_tempname = (listitem == 0 and 'otstrel' or (listitem == 1 and 'contracts' or 'trainings'))
+            sampShowDialog(D_TNSETTING_TWO, 'Взаимодействие', 'Установить\nРедактировать', 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_TWO)
+        if result and button == 1 then
+            if listitem == 0 then
+                sampSendChat('/sign '..mainIni['tempname'][current_tempname])
+            elseif listitem == 1 then
+                sampShowDialog(D_TNSETTING_THREE, 'Редактирование', '{FFFFFF}Введите желаемый никнейм:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
+            end
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_THREE)
+        if result and button == 1 then
+            mainIni['tempname'][current_tempname] = input
+            sampShowDialog(D_TNSETTING_ONE, ' ', 'Тип\tВременный никнейм\n{FF6347}Отстрел\t{FFFFFF}'..mainIni.tempname.otstrel..'\n{FF6347}Контракты\t{FFFFFF}'..mainIni.tempname.contracts..'\n{FF6347}Тренировки\t{FFFFFF}'..mainIni.tempname.trainings, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_INFO)
+        if result and button == 1 then
+            if listitem ~= 0 then
+                local dialog_text, array = (agentstats_type == 1 and 'Время\tНикнейм\tОружие\n' or (agentstats_type == 2 and 'Время\tНикнейм\tОружие\tТип\n' or 'Время\tБоеприпасы\n')), {}
+                for _, line in pairs(mainIni.stats) do
+                    local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
+                    if type == agentstats_type then
+                        local found = false
+                        for k,v in pairs(array) do
+                            if os.date('%d.%m.%Y', v) == os.date('%d.%m.%Y', date) then
+                                found = true
+                                break
+                            end
                         end
+                        if not found then
+                            table.insert(array, date)
+                        end
+                    end
+                end
+                for item, v in pairs(array) do
+                    if listitem == item then
+                        for _, line in pairs(mainIni.stats) do
+                            local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
+                            local ammo, time, nickname, damage, weapon, type_ots
 
-                        if type == agentstats_type and os.date('%d.%m.%Y', date) == os.date('%d.%m.%Y', v) then
-                            g_date = os.date('%d.%m.%Y', date)
-                            if agentstats_type == 1 then
-                                dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\n'
-                            elseif agentstats_type == 2 then
-                                dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\t'..(type_ots and 'Squad' or 'Solo')..'\n'
-                            elseif agentstats_type == 3 then
-                                dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t{FF6347}'..u8:decode(ammo)..'{FFFFFF}\n'
+                            if type == 1 then
+                                time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.+)')
+                            elseif type == 2 then
+                                time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.-),')
+                                type_ots = tonumber(line:match('(%d+)$')) == 1 and true or false
+                            elseif type == 3 then
+                                ammo, time = line:match('.-,(.-),(.+)')
+                            end
+
+                            if type == agentstats_type and os.date('%d.%m.%Y', date) == os.date('%d.%m.%Y', v) then
+                                g_date = os.date('%d.%m.%Y', date)
+                                if agentstats_type == 1 then
+                                    dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\n'
+                                elseif agentstats_type == 2 then
+                                    dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\t'..(type_ots and 'Squad' or 'Solo')..'\n'
+                                elseif agentstats_type == 3 then
+                                    dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t{FF6347}'..u8:decode(ammo)..'{FFFFFF}\n'
+                                end
                             end
                         end
                     end
                 end
-            end
 
-            sampShowDialog(D_INVALID, 'Информация о '..(agentstats_type == 1 and 'выполненных контрактах' or (agentstats_type == 2 and 'работе отстрела' or 'принесенных боеприпасах'))..' ['..g_date..']', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+                sampShowDialog(D_INVALID, 'Информация о '..(agentstats_type == 1 and 'выполненных контрактах' or (agentstats_type == 2 and 'работе отстрела' or 'принесенных боеприпасах'))..' ['..g_date..']', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+            end
         end
-    end
 
-    local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_POINTS)
-    if result and button == 1 then
-        if sampGetDialogText():find('Введите новое значение баллов') then
-            mainIni['config'][agentstats_points] = tonumber(input)  
-            sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела [SOLO]:\t'..mainIni.config.points_otstrel..'\nБаллы за работу отстрела [SQUAD]:\t'..mainIni.config.points_otstrel_squad..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
-        else
-            agentstats_points = (listitem == 0 and 'points_contracts' or (listitem == 1 and 'points_otstrel' or (listitem == 2 and 'points_otstrel_squad' or 'points_ammo')))
-            sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Введите новое значение баллов:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
-        end
-    end
-
-    local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_MAIN)
-    if result and button == 1 then
-        if sampGetDialogText():find('При очистке вашей работоспособности, восстановить её уже не получится') then
-            mainIni.stats = {}
-            sampAddChatMessage('[ Hitman Helper ]: Ваша работоспособность была очищена.', 0xCCCCCC)
-        else
-            if listitem == 1 then -- Смена типа работы отстрела (Solo/Squad)
-                otstrel_squad = not otstrel_squad
-                statsMenu()
-            end
-            if listitem == 2 then -- Информация о выполненных контрактах
-                showAgentStats(1)
-            end
-            if listitem == 3 then -- Информация о работе отстрела
-                showAgentStats(2)
-            end
-            if listitem == 4 then -- Информация о доставленных боеприпасах
-                showAgentStats(3)
-            end
-            if listitem == 5 then
+        local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_POINTS)
+        if result and button == 1 then
+            if sampGetDialogText():find('Введите новое значение баллов') then
+                mainIni['config'][agentstats_points] = tonumber(input)  
                 sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела [SOLO]:\t'..mainIni.config.points_otstrel..'\nБаллы за работу отстрела [SQUAD]:\t'..mainIni.config.points_otstrel_squad..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+            else
+                agentstats_points = (listitem == 0 and 'points_contracts' or (listitem == 1 and 'points_otstrel' or (listitem == 2 and 'points_otstrel_squad' or 'points_ammo')))
+                sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Введите новое значение баллов:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
             end
-            if listitem == 6 then
-                sampShowDialog(D_AGENTSTATS_MAIN, 'Предупреждение', 'При очистке вашей работоспособности, восстановить её уже не получится.\nВы уверены, что желаете это сделать?', 'Да', 'Нет', DIALOG_STYLE_MSGBOX)
+        end
+
+        local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_MAIN)
+        if result and button == 1 then
+            if sampGetDialogText():find('При очистке вашей работоспособности, восстановить её уже не получится') then
+                mainIni.stats = {}
+                sampAddChatMessage('[ Hitman Helper ]: Ваша работоспособность была очищена.', 0xCCCCCC)
+            else
+                if listitem == 1 then -- Смена типа работы отстрела (Solo/Squad)
+                    otstrel_squad = not otstrel_squad
+                    statsMenu()
+                end
+                if listitem == 2 then -- Информация о выполненных контрактах
+                    showAgentStats(1)
+                end
+                if listitem == 3 then -- Информация о работе отстрела
+                    showAgentStats(2)
+                end
+                if listitem == 4 then -- Информация о доставленных боеприпасах
+                    showAgentStats(3)
+                end
+                if listitem == 5 then
+                    sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Баллы за выполнение контрактов:\t'..mainIni.config.points_contracts..'\nБаллы за работу отстрела [SOLO]:\t'..mainIni.config.points_otstrel..'\nБаллы за работу отстрела [SQUAD]:\t'..mainIni.config.points_otstrel_squad..'\nБаллы за доставку боеприпасов:\t'..mainIni.config.points_ammo, 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+                end
+                if listitem == 6 then
+                    sampShowDialog(D_AGENTSTATS_MAIN, 'Предупреждение', 'При очистке вашей работоспособности, восстановить её уже не получится.\nВы уверены, что желаете это сделать?', 'Да', 'Нет', DIALOG_STYLE_MSGBOX)
+                end
             end
         end
     end
@@ -1830,157 +1826,164 @@ function comma_value(n)
 end
 
 function scriptBody()
-    local sw, sh = getScreenResolution()
+    while true do
+        wait(0)
 
-    displayHud((mainIni.config.shud and true or false))
-    if mainIni.config.hud then
-        local health = getCharHealth(PLAYER_PED) < 100 and getCharHealth(PLAYER_PED) > -1 and getCharHealth(PLAYER_PED) or 100
-		local weapon = getCurrentCharWeapon(PLAYER_PED)
-        local money_string = setpoint(getPlayerMoney(PLAYER_HANDLE))..'$'
-        local weaponline = string.upper(weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)])..(weapon > 15 and weapon ~= 46 and ' ('..getAmmoInClip() ..'/'.. getAmmoInCharWeapon(PLAYER_PED, weapon) - getAmmoInClip()..')' or '')
+        local pressed_screen = isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C) and true or false
+        local showed = (not pressed_screen and true or ((mainIni.config.without_screen and not isKeyDown(0x74)) and true or false))
+        displayHud((mainIni.config.shud and true or false))
+        
+        local sw, sh = getScreenResolution()
 
-        renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos, 357, 30, 2852126720.0)
+        if showed and mainIni.config.hud then
+            local health = getCharHealth(PLAYER_PED) < 100 and getCharHealth(PLAYER_PED) > -1 and getCharHealth(PLAYER_PED) or 100
+            local weapon = getCurrentCharWeapon(PLAYER_PED)
+            local money_string = setpoint(getPlayerMoney(PLAYER_HANDLE))..'$'
+            local weaponline = string.upper(weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)])..(weapon > 15 and weapon ~= 46 and ' ('..getAmmoInClip() ..'/'.. getAmmoInCharWeapon(PLAYER_PED, weapon) - getAmmoInClip()..')' or '')
 
-        if getCharArmour(PLAYER_PED) ~= 0 then
-            renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 27, 357, 5, 0xFF2d2d2d)
-            renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(357/100*getCharArmour(PLAYER_PED)), mainIni.hud.ypos + 27, math.ceil(357/100*getCharArmour(PLAYER_PED)), 5, 0xFFc7d3e2)
-            renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 33, 357, 5, 0xFF2d2d2d)
-            renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(3.57 * health), mainIni.hud.ypos + 33, math.ceil(3.57 * health), 5, 0xFFce7c7c)
-        else
-            renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 27, 357, 5, 0xFF2d2d2d)
-            renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(3.57 * health), mainIni.hud.ypos + 27, math.ceil(3.57 * health), 5, 0xFFce7c7c)
-        end
+            renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos, 357, 30, 2852126720.0)
 
-        renderDrawLine(mainIni.hud.xpos, mainIni.hud.ypos, mainIni.hud.xpos + 357, mainIni.hud.ypos, 1, 0xFFFFFFFF)
-    
-        if getCurrentCharWeapon(PLAYER_PED) ~= 0 and (not isCharInAnyCar(PLAYER_PED) or PLAYER_PED ~= getDriverOfCar(storeCarCharIsInNoSave(PLAYER_PED))) then
-            renderFontDrawText(font_hud, money_string, mainIni.hud.xpos + 2, mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, weaponline, mainIni.hud.xpos + 355 - renderGetFontDrawTextLength(font_hud, weaponline), mainIni.hud.ypos + 3, 4294967295.0)
-        elseif thispp and isCharInAnyCar(PLAYER_PED) and PLAYER_PED == getDriverOfCar(storeCarCharIsInNoSave(PLAYER_PED)) then
-            renderFontDrawText(font_hud, money_string, mainIni.hud.xpos + 2, mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.sport and "S" or "•", mainIni.hud.xpos + 349 - renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.lock and "D" or "•", mainIni.hud.xpos + 343 - 2 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.light and "L" or "•", mainIni.hud.xpos + 337 - 3 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.engine and "E" or "•", mainIni.hud.xpos + 331 - 4 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, "—", mainIni.hud.xpos + 281, mainIni.hud.ypos + 2, 2868903935.0)
-            renderFontDrawText(font_hud, "—", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string), mainIni.hud.ypos + 2, 2868903935.0)
-            renderFontDrawText(font_hud, car.speed .. " km/h", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20, mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.fuel .. " l", mainIni.hud.xpos + 270 - renderGetFontDrawTextLength(font_hud, car.fuel .. " l"), mainIni.hud.ypos + 2, 4294967295.0)
-            renderFontDrawText(font_hud, car.health .. " HP", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20 + renderGetFontDrawTextLength(font_hud, car.speed .. " mh/h") + (mainIni.hud.xpos + 270 - renderGetFontDrawTextLength(font_hud, car.fuel .. " l") - (mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20 + renderGetFontDrawTextLength(font_hud, car.speed .. " mh/h"))) / 2 - renderGetFontDrawTextLength(font_hud, car.health .. " HP") / 2, mainIni.hud.ypos + 2, 4294967295.0)
-        else
-            renderFontDrawText(font_hud, money_string, mainIni.hud.xpos + 180 - renderGetFontDrawTextLength(font_hud, money_string) / 2, mainIni.hud.ypos + 3, 4294967295.0)
-        end
+            if getCharArmour(PLAYER_PED) ~= 0 then
+                renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 27, 357, 5, 0xFF2d2d2d)
+                renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(357/100*getCharArmour(PLAYER_PED)), mainIni.hud.ypos + 27, math.ceil(357/100*getCharArmour(PLAYER_PED)), 5, 0xFFc7d3e2)
+                renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 33, 357, 5, 0xFF2d2d2d)
+                renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(3.57 * health), mainIni.hud.ypos + 33, math.ceil(3.57 * health), 5, 0xFFce7c7c)
+            else
+                renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 27, 357, 5, 0xFF2d2d2d)
+                renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(3.57 * health), mainIni.hud.ypos + 27, math.ceil(3.57 * health), 5, 0xFFce7c7c)
+            end
 
-        if cfd ~= nil then
-            if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(cfd)) then
-                renderFontDrawText(font, '{ff0000}SEARCH: {ffffff}'..sampGetPlayerNickname(cfd):gsub('_', ' ')..' [ '..cfd..' ]', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
-                
-                if mainIni.config.metka then
-                    local result, handle = sampGetCharHandleBySampPlayerId(cfd)
+            renderDrawLine(mainIni.hud.xpos, mainIni.hud.ypos, mainIni.hud.xpos + 357, mainIni.hud.ypos, 1, 0xFFFFFFFF)
+        
+            if getCurrentCharWeapon(PLAYER_PED) ~= 0 and (not isCharInAnyCar(PLAYER_PED) or PLAYER_PED ~= getDriverOfCar(storeCarCharIsInNoSave(PLAYER_PED))) then
+                renderFontDrawText(font_hud, money_string, mainIni.hud.xpos + 2, mainIni.hud.ypos + 2, 4294967295.0)
+                renderFontDrawText(font_hud, weaponline, mainIni.hud.xpos + 355 - renderGetFontDrawTextLength(font_hud, weaponline), mainIni.hud.ypos + 3, 4294967295.0)
+            elseif thispp and isCharInAnyCar(PLAYER_PED) and PLAYER_PED == getDriverOfCar(storeCarCharIsInNoSave(PLAYER_PED)) then
+                renderFontDrawText(font_hud, money_string, mainIni.hud.xpos + 2, mainIni.hud.ypos + 2, 4294967295.0)
+                renderFontDrawText(font_hud, car.sport and "S" or "•", mainIni.hud.xpos + 349 - renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
+                renderFontDrawText(font_hud, car.lock and "D" or "•", mainIni.hud.xpos + 343 - 2 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
+                renderFontDrawText(font_hud, car.light and "L" or "•", mainIni.hud.xpos + 337 - 3 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
+                renderFontDrawText(font_hud, car.engine and "E" or "•", mainIni.hud.xpos + 331 - 4 * renderGetFontDrawTextLength(font_hud, "E"), mainIni.hud.ypos + 2, 4294967295.0)
+                renderFontDrawText(font_hud, "—", mainIni.hud.xpos + 281, mainIni.hud.ypos + 2, 2868903935.0)
+                renderFontDrawText(font_hud, "—", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string), mainIni.hud.ypos + 2, 2868903935.0)
+                renderFontDrawText(font_hud, car.speed .. " km/h", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20, mainIni.hud.ypos + 2, 4294967295.0)
+                renderFontDrawText(font_hud, car.fuel .. " l", mainIni.hud.xpos + 270 - renderGetFontDrawTextLength(font_hud, car.fuel .. " l"), mainIni.hud.ypos + 2, 4294967295.0)
+                renderFontDrawText(font_hud, car.health .. " HP", mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20 + renderGetFontDrawTextLength(font_hud, car.speed .. " mh/h") + (mainIni.hud.xpos + 270 - renderGetFontDrawTextLength(font_hud, car.fuel .. " l") - (mainIni.hud.xpos + 14 + renderGetFontDrawTextLength(font_hud, money_string) + 20 + renderGetFontDrawTextLength(font_hud, car.speed .. " mh/h"))) / 2 - renderGetFontDrawTextLength(font_hud, car.health .. " HP") / 2, mainIni.hud.ypos + 2, 4294967295.0)
+            else
+                renderFontDrawText(font_hud, money_string, mainIni.hud.xpos + 180 - renderGetFontDrawTextLength(font_hud, money_string) / 2, mainIni.hud.ypos + 3, 4294967295.0)
+            end
 
-                    if result and doesCharExist(handle) and isCharOnScreen(handle) then
-                        local px, py, pz = getActiveCameraCoordinates()
-                        local tpx, tpy, tpz = getBodyPartCoordinates(5, handle)
+            if cfd ~= nil then
+                if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(cfd)) then
+                    renderFontDrawText(font, '{ff0000}SEARCH: {ffffff}'..sampGetPlayerNickname(cfd):gsub('_', ' ')..' [ '..cfd..' ]', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
+                    
+                    if mainIni.config.metka then
+                        local result, handle = sampGetCharHandleBySampPlayerId(cfd)
 
-                        local result = processLineOfSight(px, py, pz, tpx, tpy, tpz, true, false, false, true, false, true, false, false)
-                        if not result then
-                            local wposX, wposY = convert3DCoordsToScreen(tpx, tpy, tpz)
+                        if result and doesCharExist(handle) and isCharOnScreen(handle) then
+                            local px, py, pz = getActiveCameraCoordinates()
+                            local tpx, tpy, tpz = getBodyPartCoordinates(5, handle)
 
-                            renderDrawLine(wposX - 3, wposY - 3, wposX + 3, wposY + 3, 1, 0xFFFFFFFF)
-                            renderDrawLine(wposX - 3, wposY + 3, wposX + 3, wposY - 3, 1, 0xFFFFFFFF)
+                            local result = processLineOfSight(px, py, pz, tpx, tpy, tpz, true, false, false, true, false, true, false, false)
+                            if not result then
+                                local wposX, wposY = convert3DCoordsToScreen(tpx, tpy, tpz)
+
+                                renderDrawLine(wposX - 3, wposY - 3, wposX + 3, wposY + 3, 1, 0xFFFFFFFF)
+                                renderDrawLine(wposX - 3, wposY + 3, wposX + 3, wposY - 3, 1, 0xFFFFFFFF)
+                            end
                         end
                     end
                 end
             end
-        end
 
-        local checkstream_pos = (cfd ~= nil and (getInvisibility(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) and mainIni.hud.ypos - 60 or mainIni.hud.ypos - 40) or mainIni.hud.ypos - 35)
-        if mainIni.config.otstrel then
-            local found, otstrel_stream = false, {}
-            for id = 0, sampGetMaxPlayerId(true) do
-                if sampIsPlayerConnected(id) then
-                    for k,v in pairs(otstrel_list) do
-                        if v.name == sampGetPlayerNickname(id) then
-                            table.insert(otstrel_stream, id)
+            local checkstream_pos = (cfd ~= nil and (getInvisibility(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) and mainIni.hud.ypos - 60 or mainIni.hud.ypos - 40) or mainIni.hud.ypos - 35)
+            if mainIni.config.otstrel then
+                local found, otstrel_stream = false, {}
+                for id = 0, sampGetMaxPlayerId(true) do
+                    if sampIsPlayerConnected(id) then
+                        for k,v in pairs(otstrel_list) do
+                            if v.name == sampGetPlayerNickname(id) then
+                                table.insert(otstrel_stream, id)
+                            end
                         end
                     end
                 end
-            end
-    
-            for _, id in pairs(otstrel_stream) do
-                local p_xpos, p_ypos, p_zpos = getCharCoordinates(PLAYER_PED)
-                local res, handle = sampGetCharHandleBySampPlayerId(id)
-                if res then
-                    checkstream_pos = checkstream_pos - 15
-                    local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
-                    local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
-                    if result then
-                        renderFontDrawText(font, sampGetPlayerNickname(id)..' {FFFFFF}[ {800000}'..id..' {FFFFFF}] | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xFF800000)
-                        found = true
+        
+                for _, id in pairs(otstrel_stream) do
+                    local p_xpos, p_ypos, p_zpos = getCharCoordinates(PLAYER_PED)
+                    local res, handle = sampGetCharHandleBySampPlayerId(id)
+                    if res then
+                        checkstream_pos = checkstream_pos - 15
+                        local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
+                        local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
+                        if result then
+                            renderFontDrawText(font, sampGetPlayerNickname(id)..' {FFFFFF}[ {800000}'..id..' {FFFFFF}] | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xFF800000)
+                            found = true
+                        end
                     end
                 end
+                checkstream_pos = checkstream_pos - 15
+                if found then renderFontDrawText(font, 'Отстрел:', mainIni.hud.xpos - 1, checkstream_pos, 0xFFFFFFFF) end
             end
-            checkstream_pos = checkstream_pos - 15
-            if found then renderFontDrawText(font, 'Отстрел:', mainIni.hud.xpos - 1, checkstream_pos, 0xFFFFFFFF) end
+
+            if mainIni.config.cstream then
+                local found, ct_stream = false, {}
+                for id = 0, sampGetMaxPlayerId(true) do
+                    if sampIsPlayerConnected(id) then
+                        for k,v in pairs(c_ids) do
+                            if k == id then
+                                table.insert(ct_stream, k, v)
+                            end
+                        end
+                    end
+                end
+
+                for id, sum in pairs(ct_stream) do
+                    local p_xpos, p_ypos, p_zpos = getCharCoordinates(PLAYER_PED)
+                    local res, handle = sampGetCharHandleBySampPlayerId(id)
+                    if res then
+                        checkstream_pos = checkstream_pos - 15
+                        local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
+                        local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
+                        if result then
+                            renderFontDrawText(font, sampGetPlayerNickname(id)..' {FFFFFF}[ {800000}'..id..' {FFFFFF}] ('..sum..'$) | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xFF800000)
+                            found = true
+                        end
+                    end
+                end
+                checkstream_pos = checkstream_pos - 15
+                if found then renderFontDrawText(font, 'Контракты:', mainIni.hud.xpos - 1, checkstream_pos, 0xFFFFFFFF) end
+            end
+        
+            if getInvisibility(id) then renderFontDrawText(font, 'INVISIBILITY', mainIni.hud.xpos - 1, (cfd ~= nil and mainIni.hud.ypos - 50 or mainIni.hud.ypos - 27), 0xFF0088FF) end
+            renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE{FFFFFF} / '..(mainIni.config.nametag and '{008000}ON' or '{ff0000}OFF') or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', (cfd ~= nil and mainIni.hud.xpos + 225 or getInvisibility(id) and mainIni.hud.xpos + 114.2 or mainIni.hud.xpos - 1), mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
         end
 
         if mainIni.config.cstream then
-            local found, ct_stream = false, {}
-            for id = 0, sampGetMaxPlayerId(true) do
-                if sampIsPlayerConnected(id) then
-                    for k,v in pairs(c_ids) do
-                        if k == id then
-                            table.insert(ct_stream, k, v)
-                        end
-                    end
+            lua_thread.create(function ()
+                if os.clock() - time_stream >= 10 then
+                    c_ids = {}
+                    sampSendChat('/contractas')
+                    openContractas = true
+                    time_stream = os.clock()
                 end
-            end
-
-            for id, sum in pairs(ct_stream) do
-                local p_xpos, p_ypos, p_zpos = getCharCoordinates(PLAYER_PED)
-                local res, handle = sampGetCharHandleBySampPlayerId(id)
-                if res then
-                    checkstream_pos = checkstream_pos - 15
-                    local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
-                    local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
-                    if result then
-                        renderFontDrawText(font, sampGetPlayerNickname(id)..' {FFFFFF}[ {800000}'..id..' {FFFFFF}] ('..sum..'$) | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xFF800000)
-                        found = true
-                    end
-                end
-            end
-            checkstream_pos = checkstream_pos - 15
-            if found then renderFontDrawText(font, 'Контракты:', mainIni.hud.xpos - 1, checkstream_pos, 0xFFFFFFFF) end
-        end
-    
-        if getInvisibility(id) then renderFontDrawText(font, 'INVISIBILITY', mainIni.hud.xpos - 1, (cfd ~= nil and mainIni.hud.ypos - 50 or mainIni.hud.ypos - 27), 0xFF0088FF) end
-        renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE{FFFFFF} / '..(mainIni.config.nametag and '{008000}ON' or '{ff0000}OFF') or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', (cfd ~= nil and mainIni.hud.xpos + 225 or getInvisibility(id) and mainIni.hud.xpos + 114.2 or mainIni.hud.xpos - 1), mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
-    end
-
-    if mainIni.config.cstream then
-        lua_thread.create(function ()
-            if os.clock() - time_stream >= 10 then
-                c_ids = {}
-                sampSendChat('/contractas')
-                openContractas = true
-                time_stream = os.clock()
-            end
-        end)
-    end
-
-    if cfd ~= nil then
-        if mainIni.config.autofind then
-            if (os.clock() - time_find >= 4) and (cfd ~= nil) then
-                if thispp or mainIni.config.search_other_servers then
-                    sampSendChat('/find '..cfd)
-                end
-                time_find = os.clock()
-            end
+            end)
         end
 
-        if not sampIsPlayerConnected(cfd) then
-            cfd = nil
-            --sampAddChatMessage('[ Мысли ]: Преследование прекращено.', 0xCCCCCC)
+        if cfd ~= nil then
+            if mainIni.config.autofind then
+                if (os.clock() - time_find >= 4) and (cfd ~= nil) then
+                    if thispp or mainIni.config.search_other_servers then
+                        sampSendChat('/find '..cfd)
+                    end
+                    time_find = os.clock()
+                end
+            end
+
+            if not sampIsPlayerConnected(cfd) then
+                cfd = nil
+                --sampAddChatMessage('[ Мысли ]: Преследование прекращено.', 0xCCCCCC)
+            end
         end
     end
 end
