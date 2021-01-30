@@ -1092,7 +1092,7 @@ function sampev.onServerMessage(color, text)
         if text:find('{FF0000}<< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}>>') then
             local ct_name = text:match('выполнил контракт на (.+), и получил')
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
-            table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name)
+            table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name..','..text:match('и получил {00BC12}(%d+%$)'))
         end
         if text:find('{8B8B8B}Агент №'..acc_id..' {FF0000}принял контракт на: {8B8B8B}.-%[%d-%] {00AC31}Цена: %d-$ {cccccc}') then
             last_contract = text:match('на: {8B8B8B}(.-)%[%d-%]')
@@ -1106,8 +1106,8 @@ function sampev.onServerMessage(color, text)
         if mainIni.config.autoscreen then screenct() end
         return false
     end
-    if text:find('%[ Мысли %]: Я положил ящик на склад%s*{......}%s*%[ .+ %] ') then
-        local ammo = text:match('%[ Мысли %]: Я положил ящик на склад%s*{......}%s*%[ (.-) %]')
+    if text:find('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]') then
+        local ammo = text:match('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]')
         table.insert(mainIni.stats, '3,'..ammo..','..os.time())
     end
     if text:find('{8B8B8B}Агентство: {FF0000}новый контракт {8B8B8B}.+{FF0000}, сумма {8B8B8B}%d+$ %[ /goc принять %]%[ /givec поручить %]') then
@@ -1695,7 +1695,7 @@ function dialogFunc()
         local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_INFO)
         if result and button == 1 then
             if listitem ~= 0 then
-                local dialog_text, array = (agentstats_type == 1 and 'Время\tНикнейм\tОружие\n' or (agentstats_type == 2 and 'Время\tНикнейм\tОружие\tТип\n' or 'Время\tБоеприпасы\n')), {}
+                local dialog_text, array = (agentstats_type == 1 and 'Время\tНикнейм\tОружие\tСумма\n' or (agentstats_type == 2 and 'Время\tНикнейм\tОружие\tТип\n' or 'Время\tБоеприпасы\n')), {}
                 for _, line in pairs(mainIni.stats) do
                     local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
                     if type == agentstats_type then
@@ -1715,10 +1715,10 @@ function dialogFunc()
                     if listitem == item then
                         for _, line in pairs(mainIni.stats) do
                             local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
-                            local ammo, time, nickname, damage, weapon, type_ots
+                            local ammo, time, nickname, damage, weapon, type_ots, sum
 
                             if type == 1 then
-                                time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.+)')
+                                time, nickname, damage, weapon, sum = line:match('.-,.-,(.-),(.-),(.-),(.-),(.+)')
                             elseif type == 2 then
                                 time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.-),')
                                 type_ots = tonumber(line:match('(%d+)$')) == 1 and true or false
@@ -1729,7 +1729,7 @@ function dialogFunc()
                             if type == agentstats_type and os.date('%d.%m.%Y', date) == os.date('%d.%m.%Y', v) then
                                 g_date = os.date('%d.%m.%Y', date)
                                 if agentstats_type == 1 then
-                                    dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\n'
+                                    dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\t{3caa3c}'..sum..'\n'
                                 elseif agentstats_type == 2 then
                                     dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\t'..(type_ots and 'Squad' or 'Solo')..'\n'
                                 elseif agentstats_type == 3 then
