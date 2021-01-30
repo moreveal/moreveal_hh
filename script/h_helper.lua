@@ -111,14 +111,19 @@ function main()
             onlypp = false,
             autoupdate = false,
             anonymizer = false,
-            fakenick = false,
-            nametag = true,
             shud = false,
             hud = true,
             points_ammo = 1,
             points_contracts = 2,
             points_otstrel = 3.5,
             points_otstrel_squad = 3
+        },
+        
+        temp = {
+            nametag = true,
+            fakenick = false,
+            accept_ct = 'Nick_Name',
+            last_ct = 'Nick_Name'
         },
 
         otstrel_list = {
@@ -209,7 +214,8 @@ function main()
             admins = 90 .. ' + '.. 75,
             setting = 35,
             screen = 119,
-            find = 88 .. ' + '.. 87
+            find = 88 .. ' + '.. 87,
+            takect = 75
         },
 
         tempname = {
@@ -232,8 +238,8 @@ function main()
 
     local ip = select(1, sampGetCurrentServerAddress())..':'..select(2, sampGetCurrentServerAddress())
     if ip ~= '176.32.37.62:7777' then
-        mainIni.config.fakenick = false 
-        mainIni.config.nametag = true
+        mainIni.temp.fakenick = false 
+        mainIni.temp.nametag = true
         if mainIni.config.onlypp then
             thisScript():unload()
         end
@@ -656,7 +662,7 @@ end
 function showSettingMacrosses()
     local macrosses_array = {}
     for k, v in pairs(macrosses_list) do macrosses_array[k] = layoutMacrossString(k) end
-    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nВзять последний пришедший контракт:\t'..macrosses_array.takect..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function layoutMacrossString(m_key)
@@ -679,7 +685,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     lastdamage.playerid, lastdamage.damage, lastdamage.weapon, lastdamage.bodypart = playerid, damage, {id = weapon, name = weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)]}, bodypart
     for k, v in pairs(otstrel_list) do
         local id = sampGetPlayerIdByNickname(v.name)
-        if playerid == id and last_contract ~= v.name then
+        if playerid == id and mainIni.temp.accept_ct ~= v.name then
             if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
                 sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
                 table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name..','..(otstrel_squad and 1 or 0))
@@ -991,8 +997,8 @@ if cmd:find('^/id ') then
 end
 
 function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
-    if text:find('{99ff66}Теперь все видят это имя:') then mainIni.config.fakenick = true end
-    if text:find('{99ff66}Вы вернули своё имя:') then mainIni.config.fakenick = false end
+    if text:find('{99ff66}Теперь все видят это имя:') then mainIni.temp.fakenick = true end
+    if text:find('{99ff66}Вы вернули своё имя:') then mainIni.temp.fakenick = false end
     if dialogid == 66 then -- меню управления транспортом
         if openCarDoors then
             carmenu_count = carmenu_count + 1
@@ -1087,7 +1093,7 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
 end
 
 function sampev.onServerMessage(color, text)
-    if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.config.fakenick = false mainIni.config.nametag = true end
+    if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.fakenick = false mainIni.temp.nametag = true end
     if acc_id ~= nil then
         if text:find('{FF0000}<< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}>>') then
             local ct_name = text:match('выполнил контракт на (.+), и получил')
@@ -1095,10 +1101,10 @@ function sampev.onServerMessage(color, text)
             table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name..','..text:match('и получил {00BC12}(%d+%$)'))
         end
         if text:find('{8B8B8B}Агент №'..acc_id..' {FF0000}принял контракт на: {8B8B8B}.-%[%d-%] {00AC31}Цена: %d-$ {cccccc}') then
-            last_contract = text:match('на: {8B8B8B}(.-)%[%d-%]')
+            mainIni.temp.accept_ct = text:match('на: {8B8B8B}(.-)%[%d-%]')
         end
         if text:find('{FF0000}%*%* {8B8B8B}.- поручил {FF0000}Агенту №{8B8B8B}'..acc_id..' {FF0000}выполнить контракт на: {8B8B8B}.- %*%*') then
-            last_contract = text:match('на: {8B8B8B}(.-) %*%*')
+            mainIni.temp.accept_ct = text:match('на: {8B8B8B}(.-) %*%*')
         end
     end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
@@ -1112,6 +1118,7 @@ function sampev.onServerMessage(color, text)
     end
     if text:find('{8B8B8B}Агентство: {FF0000}новый контракт {8B8B8B}.+{FF0000}, сумма {8B8B8B}%d+$ %[ /goc принять %]%[ /givec поручить %]') then
         local name = text:match('новый контракт {8B8B8B}(.-){')
+        mainIni.temp.last_ct = name
         if autogoc_price ~= 0 then 
             if tonumber(text:match('сумма {......}(%d-)%$')) >= autogoc_price then
             sampSendChat('/goc '..sampGetPlayerIdByNickname(name))
@@ -1403,6 +1410,14 @@ function macrossesFunc()
                 elseif isKeysDown(macrosses_list.find, true) then
                     if cfd ~= nil then sampSendChat('/find '..cfd) end
                     wait(300)
+
+                elseif isKeysDown(macrosses_list.takect, true) then
+                    local id = sampGetPlayerIdByNickname(mainIni.temp.last_ct)
+                    if id ~= -1 then
+                        sampSendChat('/cancel')
+                        sampSendChat('/goc '..id)
+                    end
+                    wait(300)
                 end
             end
         end
@@ -1421,18 +1436,14 @@ function dialogFunc()
                     showSettingMacrosses()
                 end
                 if listitem == 1 then
-                    macrosses_list.knock = {164, 221}
-                    macrosses_list.boot = {164, 219}
-                    macrosses_list.members = {164, 186}
-                    macrosses_list.contracts = {164, 222}
-                    macrosses_list.cancel = {164, 190}
-                    macrosses_list.getct = {190, 191}
-                    macrosses_list.myc = {164, 188}
-                    macrosses_list.invis = {88, 90}
-                    macrosses_list.otstrel = {164, 76}
-                    macrosses_list.admins = {164, 75}
-                    macrosses_list.setting = {35}
-                    macrosses_list.screen = {18, 90}
+                    mainIni.macrosses = {}
+                    mainIni = inicfg.load(defaultIni, config_path)
+                    for k, v in pairs(mainIni.macrosses) do
+                        macrosses_list[k] = {}
+                        for key in tostring(v):gmatch('[^%s?%+]+') do
+                            table.insert(macrosses_list[k], tonumber(key))
+                        end
+                    end
                     showSettingMacrosses()
                 end
             else
@@ -1448,7 +1459,8 @@ function dialogFunc()
                 if listitem == 11 then setting_bind = 'admins' end
                 if listitem == 12 then setting_bind = 'find' end
                 if listitem == 13 then setting_bind = 'screen' end
-                if listitem == 14 then setting_bind = 'setting' end
+                if listitem == 14 then setting_bind = 'takect' end
+                if listitem == 15 then setting_bind = 'setting' end
                 lockPlayerControl(true)
             end     
         end
@@ -1679,7 +1691,7 @@ function dialogFunc()
         local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_TWO)
         if result and button == 1 then
             if listitem == 0 then
-                if mainIni.config.fakenick then sampSendChat('/sign') end
+                if mainIni.temp.fakenick then sampSendChat('/sign') end
                 sampSendChat('/sign '..mainIni['tempname'][current_tempname])
             elseif listitem == 1 then
                 sampShowDialog(D_TNSETTING_THREE, 'Редактирование', '{FFFFFF}Введите желаемый никнейм:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
@@ -1959,7 +1971,7 @@ function scriptBody()
             end
         
             if getInvisibility(id) then renderFontDrawText(font, 'INVISIBILITY', mainIni.hud.xpos - 1, (cfd ~= nil and mainIni.hud.ypos - 50 or mainIni.hud.ypos - 27), 0xFF0088FF) end
-            renderFontDrawText(font, 'NAMETAG ['..(mainIni.config.fakenick and '{8a2be2}FAKE{FFFFFF} / '..(mainIni.config.nametag and '{008000}ON' or '{ff0000}OFF') or mainIni.config.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', (cfd ~= nil and mainIni.hud.xpos + 225 or getInvisibility(id) and mainIni.hud.xpos + 114.2 or mainIni.hud.xpos - 1), mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
+            renderFontDrawText(font, 'NAMETAG ['..(mainIni.temp.fakenick and '{8a2be2}FAKE{FFFFFF} / '..(mainIni.temp.nametag and '{008000}ON' or '{ff0000}OFF') or mainIni.temp.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', (cfd ~= nil and mainIni.hud.xpos + 225 or getInvisibility(id) and mainIni.hud.xpos + 114.2 or mainIni.hud.xpos - 1), mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
         end
 
         if mainIni.config.cstream then
@@ -2253,7 +2265,7 @@ function onWindowMessage(msg, wparam, lparam)
 end
 
 function sampev.onShowPlayerNameTag(playerid, state)
-    if playerid == select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)) then mainIni.config.nametag = state end
+    if playerid == select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)) then mainIni.temp.nametag = state end
 end
 
 function sampev.onShowTextDraw(id, data)
