@@ -47,27 +47,6 @@ local nkeys_bind = {} -- хранит id клавиш при изменении макроса
 local anonymizer_path = getWorkingDirectory()..'/config/Hitman Helper/anonymizer.txt'
 local otstrel_path = getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt'
 
-local D_SETCOLOR = 5111 -- диалог для выбора цвета
-local D_SETTING = 5112 -- диалог для настройки скрипта
-local D_INVALID = 5113 -- диалог, использующийся для вывода информации
-local D_CSETTING = 5114 -- диалог для настройки чата
-local D_MSETTING = 5115 -- диалог для настройки макросов
-
-local D_ASETTING_ONE = 5116 -- диалог для настройки анонимайзера (1)
-local D_ASETTING_TWO = 5117 -- диалог для настройки анонимайзера (2)
-local D_ASETTING_THREE = 5118 -- диалог для настройки анонимайзера (3)
-
-local D_GSETTING_ONE = 5119 -- диалог для настройки названия оружий (1)
-local D_GSETTING_TWO = 5120 -- диалог для настройки названия оружий (2)
-
-local D_TNSETTING_ONE = 5121 -- диалог для выбора временного никнейма (1)
-local D_TNSETTING_TWO = 5122 -- диалог для выбора временного никнейма (2)
-local D_TNSETTING_THREE = 5123 -- диалог для выбора временного никнейма (3)
-
-local D_AGENTSTATS_MAIN = 5124 -- диалог для просмотра работоспособности агента (1)
-local D_AGENTSTATS_POINTS = 5125 -- диалог для просмотра работоспособности агента (2)
-local D_AGENTSTATS_INFO = 5126 -- диалог для просмотра работоспособности агента (3)
-
 local script_version = 41 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.7' -- версия для вывода в окне настроек, не изменять
@@ -1677,6 +1656,7 @@ function dialogFunc()
         local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_TWO)
         if result and button == 1 then
             if listitem == 0 then
+                if mainIni.config.fakenick then sampSendChat('/sign') end
                 sampSendChat('/sign '..mainIni['tempname'][current_tempname])
             elseif listitem == 1 then
                 sampShowDialog(D_TNSETTING_THREE, 'Редактирование', '{FFFFFF}Введите желаемый никнейм:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
