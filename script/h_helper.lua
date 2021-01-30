@@ -47,6 +47,27 @@ local nkeys_bind = {} -- хранит id клавиш при изменении макроса
 local anonymizer_path = getWorkingDirectory()..'/config/Hitman Helper/anonymizer.txt'
 local otstrel_path = getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt'
 
+local D_SETCOLOR = 5111 -- диалог дл€ выбора цвета
+local D_SETTING = 5112 -- диалог дл€ настройки скрипта
+local D_INVALID = 5113 -- диалог, использующийс€ дл€ вывода информации
+local D_CSETTING = 5114 -- диалог дл€ настройки чата
+local D_MSETTING = 5115 -- диалог дл€ настройки макросов
+
+local D_ASETTING_ONE = 5116 -- диалог дл€ настройки анонимайзера (1)
+local D_ASETTING_TWO = 5117 -- диалог дл€ настройки анонимайзера (2)
+local D_ASETTING_THREE = 5118 -- диалог дл€ настройки анонимайзера (3)
+
+local D_GSETTING_ONE = 5119 -- диалог дл€ настройки названи€ оружий (1)
+local D_GSETTING_TWO = 5120 -- диалог дл€ настройки названи€ оружий (2)
+
+local D_TNSETTING_ONE = 5121 -- диалог дл€ выбора временного никнейма (1)
+local D_TNSETTING_TWO = 5122 -- диалог дл€ выбора временного никнейма (2)
+local D_TNSETTING_THREE = 5123 -- диалог дл€ выбора временного никнейма (3)
+
+local D_AGENTSTATS_MAIN = 5124 -- диалог дл€ просмотра работоспособности агента (1)
+local D_AGENTSTATS_POINTS = 5125 -- диалог дл€ просмотра работоспособности агента (2)
+local D_AGENTSTATS_INFO = 5126 -- диалог дл€ просмотра работоспособности агента (3)
+
 local script_version = 41 --[[ »спользуетс€ дл€ автообновлени€, во избежание проблем 
 с получением новых обновлений, рекомендуетс€ не измен€ть. ¬ случае их по€влени€ измените значение на "1" ]]
 local text_version = '1.7' -- верси€ дл€ вывода в окне настроек, не измен€ть
@@ -513,9 +534,11 @@ function loadOtstrelList(type)
     otstrel_list = {}
     --[[local response = requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/otstrel_list')
     for name in response.text:gmatch('[^\r\n]+') do table.insert(otstrel_list, {name = name}) end]]
-    local f = io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'r+')
-    for name in f:lines() do table.insert(otstrel_list, {name = name}) end
-    f:close()
+    if doesFileExist(otstrel_path) then
+        local f = io.open(otstrel_path, 'r+')
+        for name in f:lines() do table.insert(otstrel_list, {name = name}) end
+        f:close()
+    end
 
     if type == 1 and mainIni.config.otstrel then
         local count, count_online = 0, 0
