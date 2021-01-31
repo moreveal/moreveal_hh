@@ -1880,7 +1880,7 @@ function screenct()
             for k, v in pairs(macrosses_list.screen) do goKeyPressed(v) end
         end
         sampAddChatMessage('Screenshot completed', 0x850000)
-    end
+    end)
 end
 
 function comma_value(n)
