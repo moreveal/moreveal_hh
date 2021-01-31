@@ -3,6 +3,7 @@ require 'lib.sampfuncs'
 require 'lib.moonloader'
 local inicfg = require 'inicfg'
 local vkeys = require 'vkeys'
+local socket = require 'luasocket.socket'
 
 local encoding = require 'encoding'
 encoding.default = 'CP1251'
@@ -42,6 +43,7 @@ defaultIni = {
         anonymizer = false,
         shud = false,
         hud = true,
+        screen_type = true,
         points_ammo = 1,
         points_contracts = 2,
         points_otstrel = 3.5,
@@ -197,7 +199,7 @@ local D_AGENTSTATS_MAIN = 7143 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7144 -- диалог для просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 7145 -- диалог для просмотра работоспособности агента (3)
 
-local script_version = 42 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 43 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.7' -- версия для вывода в окне настроек, не изменять
 
@@ -222,14 +224,15 @@ function main()
     mainIni = inicfg.load(defaultIni, config_path)
 
     if not doesFileExist(getWorkingDirectory()..'/lib/requests.lua') then
-        downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/lib/requests/requests.lua', getWorkingDirectory()..'/lib/requests.lua', function(id, status) 
-            if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                sampAddChatMessage("[ Hitman Helper ]: Библиотека 'requests' установлена автоматически.", 0xCCCCCC)
-            end
-        end)
+        downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/lib/requests/requests.lua', getWorkingDirectory()..'/lib/requests.lua', function(id, status)  end)
         wait(1000)
+    elseif not doesFileExist(getWorkingDirectory()..'/lib/screenshot.lua') or not doesFileExist(getGameDirectory()..'/Screenshot.asi') then
+        downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/lib/screenshot/screenshot.lua', getWorkingDirectory()..'/lib/screenshot.lua', function(id, status) end)
+        downloadUrlToFile('https://github.com/moreveal/moreveal_hh/raw/main/lib/screenshot/Screenshot.asi', getGameDirectory()..'/Screenshot.asi', function(id, status) end)
+        wait(3000)
     end
     requests = require 'requests'
+    screenshot = require 'screenshot'
 
     local ip = select(1, sampGetCurrentServerAddress())..':'..select(2, sampGetCurrentServerAddress())
     if ip ~= '176.32.37.62:7777' then
@@ -411,10 +414,10 @@ function main()
         end
 
         if test_as then
-            if isKeyJustPressed(0x73) then
+            if isKeyJustPressed(0x73) then -- F4
                 screenct()
             end
-            if isKeyJustPressed(0x74) then
+            if isKeyJustPressed(0x74) then -- F5
                 sampAddChatMessage('[ Hitman Helper ]: Вы вышли из режима тестирования авто-скриншота', 0xCCCCCC)
                 test_as = false
             end
@@ -1341,7 +1344,7 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{cccccc}Моя работоспособность\n{ffffff}Авто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер контрактов\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на игроке в [/cfd]\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\nПостоянный поиск игрока в [/cfd]\t'..(mainIni.config.autofind and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока в [/cfd] на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов\nТест авто-скриншота', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{cccccc}Моя работоспособность\n{ffffff}Метод сохранения скриншотов:\t'..(mainIni.config.screen_type and 'Встроенный модуль' or 'Сочетание клавиш')..'\nТест авто-скриншота\nАвто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер контрактов\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на игроке в [/cfd]\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\nПостоянный поиск игрока в [/cfd]\t'..(mainIni.config.autofind and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока в [/cfd] на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function statsMenu()
@@ -1621,12 +1624,26 @@ function dialogFunc()
                     statsMenu()
                     openMenu = false
                 end
-                if listitem == 2 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
-                if listitem == 3 then mainIni.config.cstream = not mainIni.config.cstream end
-                if listitem == 4 then mainIni.config.metka = not mainIni.config.metka end
-                if listitem == 5 then mainIni.config.autofind = not mainIni.config.autofind end
-                if listitem == 6 then mainIni.config.without_screen = not mainIni.config.without_screen end
-                if listitem == 7 then
+                if listitem == 2 then mainIni.config.screen_type = not mainIni.config.screen_type end
+                if listitem == 3 then
+                    if mainIni.config.screen_type then
+                        sampAddChatMessage('[ Hitman Helper ]: Сейчас скрипт использует метод сохранения скриншотов через встроенный в него модуль.', 0xCCCCCC)
+                        sampAddChatMessage('[ Hitman Helper ]: По умолчанию скриншоты сохраняются по этому пути: [GTA San Andreas User Files/SAMP/screens]', 0xCCCCCC)
+                        sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт сделал скриншот, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
+                    else
+                        sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
+                        sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
+                        sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
+                    end
+                    test_as = true
+                    openMenu = false
+                end
+                if listitem == 4 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
+                if listitem == 5 then mainIni.config.cstream = not mainIni.config.cstream end
+                if listitem == 6 then mainIni.config.metka = not mainIni.config.metka end
+                if listitem == 7 then mainIni.config.autofind = not mainIni.config.autofind end
+                if listitem == 8 then mainIni.config.without_screen = not mainIni.config.without_screen end
+                if listitem == 9 then
                     mainIni.config.otstrel = not mainIni.config.otstrel
                     if mainIni.config.otstrel then
                         if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
@@ -1638,26 +1655,26 @@ function dialogFunc()
                         loadOtstrelList(1)
                     end
                 end
-                if listitem == 8 then 
+                if listitem == 10 then 
                     mainIni.config.ooc_only = not mainIni.config.ooc_only
                     if mainIni.config.ooc_only then sampAddChatMessage('Вы включили OOC-чат по умолчанию. Для использования IC чата, введите ">" перед сообщением.', 0xCCCCCC) end
                 end
-                if listitem == 9 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
-                if listitem == 10 then mainIni.config.hud = not mainIni.config.hud end
-                if listitem == 11 then mainIni.config.customctstr = not mainIni.config.customctstr end
-                if listitem == 12 then mainIni.config.automobile = not mainIni.config.automobile end
-                if listitem == 13 then mainIni.config.autofill = not mainIni.config.autofill end
-                if listitem == 14 then mainIni.config.customid = not mainIni.config.customid end
-                if listitem == 15 then mainIni.config.s_speed = not mainIni.config.s_speed end
-                if listitem == 16 then
+                if listitem == 11 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
+                if listitem == 12 then mainIni.config.hud = not mainIni.config.hud end
+                if listitem == 13 then mainIni.config.customctstr = not mainIni.config.customctstr end
+                if listitem == 14 then mainIni.config.automobile = not mainIni.config.automobile end
+                if listitem == 15 then mainIni.config.autofill = not mainIni.config.autofill end
+                if listitem == 16 then mainIni.config.customid = not mainIni.config.customid end
+                if listitem == 17 then mainIni.config.s_speed = not mainIni.config.s_speed end
+                if listitem == 18 then
                     chatSettings()
                     openMenu = false
                 end
-                if listitem == 17 then
+                if listitem == 19 then
                     anonymizerSettings()
                     openMenu = false
                 end
-                if listitem == 18 then
+                if listitem == 20 then
                     local weapon_line
                     for k, v in pairs(weapons_list) do
                         weapon_line = (weapon_line == nil and 'Текущее название оружия\tНовое значение\n'..v..'\t>>\n' or weapon_line..v..'\t>>\n')
@@ -1665,21 +1682,14 @@ function dialogFunc()
                     sampShowDialog(D_GSETTING_ONE, 'Настройка', weapon_line, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
                     openMenu = false
                 end
-                if listitem == 19 then
+                if listitem == 21 then
                     sampAddChatMessage('[ Hitman Helper ]: Перемещайте курсор для установки нового положения кастомного худа', 0xCCCCCC)
                     sampAddChatMessage('[ Hitman Helper ]: ЛКМ - установить новое положение | ПКМ - вернуть изначальное положение', 0xCCCCCC)
                     hud_move = true
                     openMenu = false
                 end
-                if listitem == 20 then
+                if listitem == 22 then
                     showSettingMacrosses()
-                    openMenu = false
-                end
-                if listitem == 21 then
-                    sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
-                    sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
-                    sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
-                    test_as = true
                     openMenu = false
                 end
 
@@ -1860,7 +1870,13 @@ function anonymizerSettings()
 end
 
 function screenct()
-    for k, v in pairs(macrosses_list.screen) do goKeyPressed(v) end
+    if mainIni.config.screen_type then -- Используя модуль
+        local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
+        local fileName = os.date('%Y-%m-%d %H-%M-%S')
+        screenshot.requestEx(filePath, fileName)
+    else -- Используя сторонние программы
+        for k, v in pairs(macrosses_list.screen) do goKeyPressed(v) end
+    end
     sampAddChatMessage('Screenshot completed', 0x850000)
 end
 
@@ -1875,9 +1891,7 @@ function scriptBody()
 
         local pressed_screen = isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C) and true or false
         local showed = true
-        if pressed_screen and mainIni.config.without_screen then
-            showed = false
-        end
+        if pressed_screen and mainIni.config.without_screen then showed = false end
         displayHud(mainIni.config.shud and true or false)
 
         if showed and mainIni.config.hud then
