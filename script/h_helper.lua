@@ -684,7 +684,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     for k, v in pairs(otstrel_list) do
         local id = sampGetPlayerIdByNickname(v.name)
         if playerid == id and mainIni.temp.accept_ct ~= v.name then
-            if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) then
+            if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) and getCharArmour(select(2, sampGetCharHandleBySampPlayerId(playerid))) <= 0 then
                 sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
                 table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name..','..(otstrel_squad and 1 or 0))
                 if mainIni.config.autoscreen then screenct() end
@@ -1124,8 +1124,8 @@ function sampev.onServerMessage(color, text)
     if text:find('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]') then
         sampAddChatMessage(text, 0xCCCCCC)
         screenct()
-        local ammo, n = text:match('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) | (%d-) %]')
-        table.insert(mainIni.stats, '3,'..ammo:find(',') and ammo:gsub(',','.') or ammo..','..os.time()..','..n)
+        local ammo, n = text:match('Я положил ящик на склад {......}%[ (.+) | (%d+) ]')
+        table.insert(mainIni.stats, '3,'..(ammo:find(',') and ammo:gsub(',','.') or ammo)..','..os.time()..','..n)
         return false
     end
     if text:find('{8B8B8B}Агентство: {FF0000}новый контракт {8B8B8B}.+{FF0000}, сумма {8B8B8B}%d+$ %[ /goc принять %]%[ /givec поручить %]') then
@@ -1874,17 +1874,11 @@ function scriptBody()
         wait(0)
 
         local pressed_screen = isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C) and true or false
-        local showed = false
-        if not pressed_screen then
-            showed = true
-        else
-            if mainIni.config.without_screen then
-                if not isKeyDown(0x74) then
-                    showed = true
-                end
-            end
+        local showed = true
+        if pressed_screen and mainIni.config.without_screen then
+            showed = false
         end
-        displayHud((mainIni.config.shud and true or false))
+        displayHud(mainIni.config.shud and true or false)
 
         if showed and mainIni.config.hud then
             local health = getCharHealth(PLAYER_PED) < 100 and getCharHealth(PLAYER_PED) > -1 and getCharHealth(PLAYER_PED) or 100
