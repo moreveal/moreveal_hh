@@ -12,21 +12,150 @@ local memory = require 'memory'
 local ffi = require "ffi"
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
 local dlstatus = require('moonloader').download_status
-local thispp = false
-
-function getBodyPartCoordinates(id, handle)
-    local pedptr = getCharPointer(handle)
-    local vec = ffi.new("float[3]")
-    getBonePosition(ffi.cast("void*", pedptr), vec, id, true)
-    return vec[0], vec[1], vec[2]
-end
 
 local cfd -- ID жертвы
 local c_ids = {} -- люди из /contractas
 local anonymizer_names = {} -- ники в анонимайзере
 local weapons_list = {} -- названия оружий
 local macrosses_list = {} -- макросы
-local lastdamage = {} -- информация по последнему попаданию
+local lastdamage = {} -- информация о последнем попадании
+
+sw, sh = getScreenResolution()
+defaultIni = {
+    config = {
+        cstream = false,
+        autoscreen = false,
+        automobile = false,
+        autofill = false,
+        customid = false,
+        s_speed = false,
+        customctstr = false,
+        macrosses = true,
+        metka = false,
+        autofind = true,
+        without_screen = false,
+        otstrel = false,
+        ooc_only = false,
+        search_other_servers = false,
+        onlypp = false,
+        autoupdate = false,
+        anonymizer = false,
+        shud = false,
+        hud = true,
+        points_ammo = 1,
+        points_contracts = 2,
+        points_otstrel = 3.5,
+        points_otstrel_squad = 3
+    },
+    
+    temp = {
+        nametag = true,
+        fakenick = false,
+        accept_ct = 'Nick_Name',
+        last_ct = 'Nick_Name'
+    },
+
+    otstrel_list = {
+        nil,
+    },
+
+    stats = {
+        nil,
+    },
+
+    chat = {
+        misli = true,
+        p_adm = true,
+        frac = true,
+        fam = true,
+        ads = true,
+        invites = true,
+        gos_ads = true,
+        a_adm = true,
+        news_cnn = true,
+        news_sekta = true,
+        hit_ads = true,
+        propose = true
+    },
+
+    weapons = {
+        [1] = 'Fist',
+        [2] = 'Brass Knuckles',
+        [3] = 'Golf Club',
+        [4] = 'Nitestick',
+        [5] = 'Knife',
+        [6] = 'Baseball Bat',
+        [7] = 'Shovel',
+        [8] = 'Pool Cue',
+        [9] = 'Kantana',
+        [10] = 'Chainsaw',
+        [11] = 'Purple Dildo',
+        [12] = 'Short Vibrator',
+        [13] = 'Long Vibrator',
+        [14] = 'White Dildo',
+        [15] = 'Flowers',
+        [16] = 'Cane',
+        [17] = 'Grenade',
+        [18] = 'Tear Gas',
+        [19] = 'Molotov Cocktail',
+        [22] = '9mm Pistol',
+        [23] = 'Silenced 9mm',
+        [24] = 'Desert Eagle',
+        [25] = 'Shotgun',
+        [26] = 'Sawn-off Shotgun',
+        [27] = 'Combat Shotgun',
+        [28] = 'Micro Uzi',
+        [29] = 'MP5',
+        [30] = 'AK-47',
+        [31] = 'M4',
+        [32] = 'Tec-9',
+        [33] = 'Country Rifle',
+        [34] = 'Sniper Rifle',
+        [35] = 'RPG',
+        [36] = 'HS Rocket',
+        [37] = 'Flamethrower',
+        [38] = 'Minigun',
+        [39] = 'Satchel Charge',
+        [40] = 'Detonator',
+        [41] = 'Spraycan',
+        [42] = 'Fire Extinguisher',
+        [43] = 'Camera',
+        [44] = 'Night Vision',
+        [45] = 'Thermal Goggles',
+        [46] = 'Parachute'      
+    },
+
+    hud = {
+        xpos = sw - 359,
+        ypos = sh - 48
+    },
+
+    macrosses = {
+        knock = 90 ..' + '.. 221,
+        boot = 90 ..' + '.. 219,
+        members = 90 ..' + '.. 186,
+        contracts = 90 ..' + '.. 222,
+        cancel = 90 .. ' + '.. 190,
+        getct = 190 .. ' + '.. 191,
+        myc = 90 .. ' + '.. 188,
+        invis = 88 .. ' + '.. 90,
+        otstrel = 90 .. ' + '.. 76,
+        admins = 90 .. ' + '.. 75,
+        setting = 35,
+        screen = 119,
+        find = 88 .. ' + '.. 87,
+        takect = 75,
+        tempname_otstrel = 90 .. ' + ' .. 49,
+        tempname_contracts = 90 .. ' + ' .. 50,
+        tempname_trainings = 90 .. ' + ' .. 51
+    },
+
+    tempname = {
+        otstrel = 'Nick_Name',
+        contracts = 'Nick_Name',
+        trainings = 'Nick_Name'
+    }
+}
 
 local otstrel_list = {} -- люди, состоящие в списке отстрела
 local otstrel_online = {} -- люди, состоящие в списке отстрела онлайн
@@ -90,143 +219,6 @@ function main()
 
     config_path = getWorkingDirectory()..'/config/Hitman Helper/hh_config.ini'
     weaponslist_path = getWorkingDirectory()..'/config/Hitman Helper/weapons_list.txt'
-
-    local sw, sh = getScreenResolution()
-    defaultIni = {
-        config = {
-            cstream = false,
-            autoscreen = false,
-            automobile = false,
-            autofill = false,
-            customid = false,
-            s_speed = false,
-            customctstr = false,
-            macrosses = true,
-            metka = false,
-            autofind = true,
-            without_screen = false,
-            otstrel = false,
-            ooc_only = false,
-            search_other_servers = false,
-            onlypp = false,
-            autoupdate = false,
-            anonymizer = false,
-            shud = false,
-            hud = true,
-            points_ammo = 1,
-            points_contracts = 2,
-            points_otstrel = 3.5,
-            points_otstrel_squad = 3
-        },
-        
-        temp = {
-            nametag = true,
-            fakenick = false,
-            accept_ct = 'Nick_Name',
-            last_ct = 'Nick_Name'
-        },
-
-        otstrel_list = {
-            nil,
-        },
-
-        stats = {
-            nil,
-        },
-
-        chat = {
-            misli = true,
-            p_adm = true,
-            frac = true,
-            fam = true,
-            ads = true,
-            invites = true,
-            gos_ads = true,
-            a_adm = true,
-            news_cnn = true,
-            news_sekta = true,
-            hit_ads = true,
-            propose = true
-        },
-
-        weapons = {
-            [1] = 'Fist',
-            [2] = 'Brass Knuckles',
-            [3] = 'Golf Club',
-            [4] = 'Nitestick',
-            [5] = 'Knife',
-            [6] = 'Baseball Bat',
-            [7] = 'Shovel',
-            [8] = 'Pool Cue',
-            [9] = 'Kantana',
-            [10] = 'Chainsaw',
-            [11] = 'Purple Dildo',
-            [12] = 'Short Vibrator',
-            [13] = 'Long Vibrator',
-            [14] = 'White Dildo',
-            [15] = 'Flowers',
-            [16] = 'Cane',
-            [17] = 'Grenade',
-            [18] = 'Tear Gas',
-            [19] = 'Molotov Cocktail',
-            [22] = '9mm Pistol',
-            [23] = 'Silenced 9mm',
-            [24] = 'Desert Eagle',
-            [25] = 'Shotgun',
-            [26] = 'Sawn-off Shotgun',
-            [27] = 'Combat Shotgun',
-            [28] = 'Micro Uzi',
-            [29] = 'MP5',
-            [30] = 'AK-47',
-            [31] = 'M4',
-            [32] = 'Tec-9',
-            [33] = 'Country Rifle',
-            [34] = 'Sniper Rifle',
-            [35] = 'RPG',
-            [36] = 'HS Rocket',
-            [37] = 'Flamethrower',
-            [38] = 'Minigun',
-            [39] = 'Satchel Charge',
-            [40] = 'Detonator',
-            [41] = 'Spraycan',
-            [42] = 'Fire Extinguisher',
-            [43] = 'Camera',
-            [44] = 'Night Vision',
-            [45] = 'Thermal Goggles',
-            [46] = 'Parachute'      
-        },
-
-        hud = {
-            xpos = sw - 359,
-            ypos = sh - 48
-        },
-
-        macrosses = {
-            knock = 90 ..' + '.. 221,
-            boot = 90 ..' + '.. 219,
-            members = 90 ..' + '.. 186,
-            contracts = 90 ..' + '.. 222,
-            cancel = 90 .. ' + '.. 190,
-            getct = 190 .. ' + '.. 191,
-            myc = 90 .. ' + '.. 188,
-            invis = 88 .. ' + '.. 90,
-            otstrel = 90 .. ' + '.. 76,
-            admins = 90 .. ' + '.. 75,
-            setting = 35,
-            screen = 119,
-            find = 88 .. ' + '.. 87,
-            takect = 75,
-            tempname_otstrel = 90 .. ' + ' .. 49,
-            tempname_contracts = 90 .. ' + ' .. 50,
-            tempname_trainings = 90 .. ' + ' .. 51
-        },
-
-        tempname = {
-            otstrel = 'Nick_Name',
-            contracts = 'Nick_Name',
-            trainings = 'Nick_Name'
-        }
-    }
     mainIni = inicfg.load(defaultIni, config_path)
 
     if not doesFileExist(getWorkingDirectory()..'/lib/requests.lua') then
@@ -300,8 +292,6 @@ function main()
 
             while os.clock() - timer < 10 do
                 wait(0)
-
-                local sw, sh = getScreenResolution()
 
                 if os.clock() - timer < 5 then
                     if c_one < 2852126720.0 then
@@ -394,7 +384,6 @@ function main()
         wait(0)
 
         if setting_bind ~= nil then
-            local sw, sh = getScreenResolution()
             renderFontDrawText(font, "Изменение макроса. Поочередно нажимайте клавиши:", sw / 2 - renderGetFontDrawTextLength(font, "Изменение макроса. Поочерёдно нажимайте клавиши:") / 2, sh / 2, 0xFFFFFFFF, true)
             renderFontDrawText(font, "Максимум - 3. Backspace - стереть. Enter - применить.", sw / 2 - renderGetFontDrawTextLength(font, "Максимум - 3. Backspace - стереть. Enter - применить.") / 2, sh / 2 + 20, 0xFFFFFFFF, true)
             
@@ -414,7 +403,6 @@ function main()
                 hud_move = false
             end
             if isKeyJustPressed(0x02) then
-                local sw, sh = getScreenResolution()
                 mainIni.hud.xpos = sw - 359
                 mainIni.hud.ypos = sh - 48
                 showCursor(false, false)
@@ -432,6 +420,13 @@ function main()
             end
         end
     end
+end
+
+function getBodyPartCoordinates(id, handle)
+    local pedptr = getCharPointer(handle)
+    local vec = ffi.new("float[3]")
+    getBonePosition(ffi.cast("void*", pedptr), vec, id, true)
+    return vec[0], vec[1], vec[2]
 end
 
 function updateScript()
@@ -1460,17 +1455,26 @@ function dialogFunc()
         if result and button == 1 then
             if listitem == 0 then
                 mainIni.config.macrosses = not mainIni.config.macrosses
-            showSettingMacrosses()
+                showSettingMacrosses()
             elseif listitem == 1 then
-                mainIni.macrosses = {}
-                mainIni = inicfg.load(defaultIni, config_path)
-                for k, v in pairs(mainIni.macrosses) do
-                    macrosses_list[k] = {}
-                    for key in tostring(v):gmatch('[^%s?%+]+') do
-                        table.insert(macrosses_list[k], tonumber(key))
-                    end
-                end
-            showSettingMacrosses()
+                macrosses_list.knock = {90, 221}
+                macrosses_list.boot = {90, 219}
+                macrosses_list.members = {90, 186}
+                macrosses_list.contracts = {90, 222}
+                macrosses_list.cancel = {90, 190}
+                macrosses_list.getct = {190, 191}
+                macrosses_list.myc = {90, 188}
+                macrosses_list.invis = {88, 90}
+                macrosses_list.otstrel = {90, 76}
+                macrosses_list.admins = {90, 75}
+                macrosses_list.setting = {35}
+                macrosses_list.screen = {119}
+                macrosses_list.find = {88, 87}
+                macrosses_list.takect = {75}
+                macrosses_list.tempname_otstrel = {90, 49}
+                macrosses_list.tempname_contracts = {90, 50}
+                macrosses_list.tempname_trainings = {90, 51}
+                showSettingMacrosses()
             elseif listitem == 2 then setting_bind = 'knock'
             elseif listitem == 3 then setting_bind = 'boot'
             elseif listitem == 4 then setting_bind = 'members'
@@ -1881,8 +1885,6 @@ function scriptBody()
             end
         end
         displayHud((mainIni.config.shud and true or false))
-        
-        local sw, sh = getScreenResolution()
 
         if showed and mainIni.config.hud then
             local health = getCharHealth(PLAYER_PED) < 100 and getCharHealth(PLAYER_PED) > -1 and getCharHealth(PLAYER_PED) or 100
