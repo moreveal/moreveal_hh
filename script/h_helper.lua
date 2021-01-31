@@ -1870,14 +1870,17 @@ function anonymizerSettings()
 end
 
 function screenct()
-    if mainIni.config.screen_type then -- »спользу€ модуль
-        local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
-        local fileName = os.date('%Y-%m-%d %H-%M-%S')
-        screenshot.requestEx(filePath, fileName)
-    else -- »спользу€ сторонние программы
-        for k, v in pairs(macrosses_list.screen) do goKeyPressed(v) end
+    lua_thread.create(function ()
+        wait(300)
+        if mainIni.config.screen_type then -- »спользу€ модуль
+            local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
+            local fileName = os.date('%Y-%m-%d %H-%M-%S')
+            screenshot.requestEx(filePath, fileName)
+        else -- »спользу€ сторонние программы
+            for k, v in pairs(macrosses_list.screen) do goKeyPressed(v) end
+        end
+        sampAddChatMessage('Screenshot completed', 0x850000)
     end
-    sampAddChatMessage('Screenshot completed', 0x850000)
 end
 
 function comma_value(n)
