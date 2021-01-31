@@ -215,7 +215,10 @@ function main()
             setting = 35,
             screen = 119,
             find = 88 .. ' + '.. 87,
-            takect = 75
+            takect = 75,
+            tempname_otstrel = 90 .. ' + ' .. 49,
+            tempname_contracts = 90 .. ' + ' .. 50,
+            tempname_trainings = 90 .. ' + ' .. 51
         },
 
         tempname = {
@@ -662,7 +665,7 @@ end
 function showSettingMacrosses()
     local macrosses_array = {}
     for k, v in pairs(macrosses_list) do macrosses_array[k] = layoutMacrossString(k) end
-    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nВзять последний пришедший контракт:\t'..macrosses_array.takect..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nВзять последний пришедший контракт:\t'..macrosses_array.takect..'\nВременный ник [Отстрел]:\t'..macrosses_array.tempname_otstrel..'\nВременный ник [Контракты]:\t'..macrosses_array.tempname_contracts..'\nВременный ник [Тренировки]:\t'..macrosses_array.tempname_trainings..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function layoutMacrossString(m_key)
@@ -1090,6 +1093,17 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
         end
         if dialogid == 1990 then return false end -- юзлесс диалог :)
     end
+    if mainIni.config.anonymizer then
+        local result = text
+        for k, v in pairs(anonymizer_names) do
+            local name = v:match('(.+) =')
+            local mask = v:match('= (.+)')
+            if result:find(name) then
+                result = result:gsub(name, mask)
+            end
+        end
+        return {dialogid, style, title, b1, b2, result}
+    end
 end
 
 function sampev.onServerMessage(color, text)
@@ -1113,8 +1127,11 @@ function sampev.onServerMessage(color, text)
         return false
     end
     if text:find('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]') then
-        local ammo = text:match('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]')
-        table.insert(mainIni.stats, '3,'..ammo..','..os.time())
+        sampAddChatMessage(text, 0xCCCCCC)
+        screenct()
+        local ammo, n = text:match('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) | (%d-) %]')
+        table.insert(mainIni.stats, '3,'..ammo:find(',') and ammo:gsub(',','.') or ammo..','..os.time()..','..n)
+        return false
     end
     if text:find('{8B8B8B}Агентство: {FF0000}новый контракт {8B8B8B}.+{FF0000}, сумма {8B8B8B}%d+$ %[ /goc принять %]%[ /givec поручить %]') then
         local name = text:match('новый контракт {8B8B8B}(.-){')
@@ -1418,10 +1435,21 @@ function macrossesFunc()
                         sampSendChat('/goc '..id)
                     end
                     wait(300)
+                
+                elseif isKeysDown(macrosses_list.tempname_otstrel, true) then incFakeNick('otstrel') wait(300)
+                elseif isKeysDown(macrosses_list.tempname_contracts, true) then incFakeNick('contracts') wait(300)
+                elseif isKeysDown(macrosses_list.tempname_trainings, true) then incFakeNick('trainings') wait(300)
+
                 end
             end
         end
     end
+end
+
+function incFakeNick(type)
+    -- types: otstrel, contracts, trainings
+    if mainIni.temp.fakenick then sampSendChat('/sign') end
+    sampSendChat('/sign '..mainIni['tempname'][type])
 end
 
 function dialogFunc()
@@ -1430,39 +1458,37 @@ function dialogFunc()
 
         local result, button, listitem, input = sampHasDialogRespond(D_MSETTING)
         if result and button == 1 then
-            if listitem == 0 or listitem == 1 then
-                if listitem == 0 then
-                    mainIni.config.macrosses = not mainIni.config.macrosses
-                    showSettingMacrosses()
-                end
-                if listitem == 1 then
-                    mainIni.macrosses = {}
-                    mainIni = inicfg.load(defaultIni, config_path)
-                    for k, v in pairs(mainIni.macrosses) do
-                        macrosses_list[k] = {}
-                        for key in tostring(v):gmatch('[^%s?%+]+') do
-                            table.insert(macrosses_list[k], tonumber(key))
-                        end
+            if listitem == 0 then
+                mainIni.config.macrosses = not mainIni.config.macrosses
+            showSettingMacrosses()
+            elseif listitem == 1 then
+                mainIni.macrosses = {}
+                mainIni = inicfg.load(defaultIni, config_path)
+                for k, v in pairs(mainIni.macrosses) do
+                    macrosses_list[k] = {}
+                    for key in tostring(v):gmatch('[^%s?%+]+') do
+                        table.insert(macrosses_list[k], tonumber(key))
                     end
-                    showSettingMacrosses()
                 end
-            else
-                if listitem == 2 then setting_bind = 'knock' end
-                if listitem == 3 then setting_bind = 'boot' end
-                if listitem == 4 then setting_bind = 'members' end
-                if listitem == 5 then setting_bind = 'contracts' end
-                if listitem == 6 then setting_bind = 'cancel' end
-                if listitem == 7 then setting_bind = 'getct' end
-                if listitem == 8 then setting_bind = 'myc' end
-                if listitem == 9 then setting_bind = 'invis' end
-                if listitem == 10 then setting_bind = 'otstrel' end
-                if listitem == 11 then setting_bind = 'admins' end
-                if listitem == 12 then setting_bind = 'find' end
-                if listitem == 13 then setting_bind = 'screen' end
-                if listitem == 14 then setting_bind = 'takect' end
-                if listitem == 15 then setting_bind = 'setting' end
-                lockPlayerControl(true)
-            end     
+            showSettingMacrosses()
+            elseif listitem == 2 then setting_bind = 'knock'
+            elseif listitem == 3 then setting_bind = 'boot'
+            elseif listitem == 4 then setting_bind = 'members'
+            elseif listitem == 5 then setting_bind = 'contracts'
+            elseif listitem == 6 then setting_bind = 'cancel'
+            elseif listitem == 7 then setting_bind = 'getct'
+            elseif listitem == 8 then setting_bind = 'myc'
+            elseif listitem == 9 then setting_bind = 'invis'
+            elseif listitem == 10 then setting_bind = 'otstrel'
+            elseif listitem == 11 then setting_bind = 'admins'
+            elseif listitem == 12 then setting_bind = 'find'
+            elseif listitem == 13 then setting_bind = 'screen'
+            elseif listitem == 14 then setting_bind = 'takect'
+            elseif listitem == 15 then setting_bind = 'tempname_otstrel'
+            elseif listitem == 16 then setting_bind = 'tempname_contracts'
+            elseif listitem == 17 then setting_bind = 'tempname_trainings'
+            elseif listitem == 18 then setting_bind = 'setting' end
+            lockPlayerControl(true)   
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_ONE)
@@ -1691,8 +1717,7 @@ function dialogFunc()
         local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_TWO)
         if result and button == 1 then
             if listitem == 0 then
-                if mainIni.temp.fakenick then sampSendChat('/sign') end
-                sampSendChat('/sign '..mainIni['tempname'][current_tempname])
+                incFakeNick(current_tempname)
             elseif listitem == 1 then
                 sampShowDialog(D_TNSETTING_THREE, 'Редактирование', '{FFFFFF}Введите желаемый никнейм:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
             end
@@ -1707,9 +1732,9 @@ function dialogFunc()
         local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_INFO)
         if result and button == 1 then
             if listitem ~= 0 then
-                local dialog_text, array = (agentstats_type == 1 and 'Время\tНикнейм\tОружие\tСумма\n' or (agentstats_type == 2 and 'Время\tНикнейм\tОружие\tТип\n' or 'Время\tБоеприпасы\n')), {}
+                local dialog_text, array = (agentstats_type == 1 and 'Время\tНикнейм\tОружие\tСумма\n' or (agentstats_type == 2 and 'Время\tНикнейм\tОружие\tТип\n' or 'Время\tБоеприпасы\tКоличество\n')), {}
                 for _, line in pairs(mainIni.stats) do
-                    local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
+                    local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('%d-,.-,(%d+),*'))
                     if type == agentstats_type then
                         local found = false
                         for k,v in pairs(array) do
@@ -1726,7 +1751,7 @@ function dialogFunc()
                 for item, v in pairs(array) do
                     if listitem == item then
                         for _, line in pairs(mainIni.stats) do
-                            local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
+                            local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('%d-,.-,(%d+),*'))
                             local ammo, time, nickname, damage, weapon, type_ots, sum
 
                             if type == 1 then
@@ -1735,7 +1760,7 @@ function dialogFunc()
                                 time, nickname, damage, weapon = line:match('.-,.-,(.-),(.-),(.-),(.-),')
                                 type_ots = tonumber(line:match('(%d+)$')) == 1 and true or false
                             elseif type == 3 then
-                                ammo, time = line:match('.-,(.-),(.+)')
+                                ammo, time, sum = line:match('.-,(.+),(%d+),(%d+)')
                             end
 
                             if type == agentstats_type and os.date('%d.%m.%Y', date) == os.date('%d.%m.%Y', v) then
@@ -1745,7 +1770,7 @@ function dialogFunc()
                                 elseif agentstats_type == 2 then
                                     dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t'..nickname..'\t'..weapon..' [{FF6347}-'..damage..'HP{ffffff}]\t'..(type_ots and 'Squad' or 'Solo')..'\n'
                                 elseif agentstats_type == 3 then
-                                    dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t{FF6347}'..u8:decode(ammo)..'{FFFFFF}\n'
+                                    dialog_text = dialog_text..os.date('[%H:%M:%S]', tonumber(time))..'\t{FF6347}'..ammo..'\t{0088FF}'..sum..'\n'
                                 end
                             end
                         end
@@ -1800,7 +1825,7 @@ end
 function showAgentStats(num)
     local array = {}
     for _, line in pairs(mainIni.stats) do
-        local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('.-,.-,(%d+),*'))
+        local type, date = tonumber(line:match('(%d-),')), tonumber(line:match('%d-,.-,(%d+),*'))
         if type == num then
             local found = false
             for _, v in pairs(array) do
@@ -1845,7 +1870,16 @@ function scriptBody()
         wait(0)
 
         local pressed_screen = isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C) and true or false
-        local showed = (not pressed_screen and true or ((mainIni.config.without_screen and not isKeyDown(0x74)) and true or false))
+        local showed = false
+        if not pressed_screen then
+            showed = true
+        else
+            if mainIni.config.without_screen then
+                if not isKeyDown(0x74) then
+                    showed = true
+                end
+            end
+        end
         displayHud((mainIni.config.shud and true or false))
         
         local sw, sh = getScreenResolution()
