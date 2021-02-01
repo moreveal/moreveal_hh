@@ -199,7 +199,7 @@ local D_AGENTSTATS_MAIN = 7143 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7144 -- диалог для просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 7145 -- диалог для просмотра работоспособности агента (3)
 
-local script_version = 43 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 44 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.7' -- версия для вывода в окне настроек, не изменять
 
@@ -1108,9 +1108,11 @@ function sampev.onServerMessage(color, text)
     if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.fakenick = false mainIni.temp.nametag = true end
     if acc_id ~= nil then
         if text:find('{FF0000}<< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}>>') then
+            sampAddChatMessage(text, 0xFF0000)
             local ct_name = text:match('выполнил контракт на (.+), и получил')
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
             table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name..','..text:match('и получил {00BC12}(%d+%$)'))
+            return false
         end
         if text:find('{8B8B8B}Агент №'..acc_id..' {FF0000}принял контракт на: {8B8B8B}.-%[%d-%] {00AC31}Цена: %d-$ {cccccc}') then
             mainIni.temp.accept_ct = text:match('на: {8B8B8B}(.-)%[%d-%]')
@@ -1368,7 +1370,11 @@ function macrossesFunc()
         if mainIni.config.macrosses then
             if not sampIsChatInputActive() then
                 if isKeysDown(macrosses_list.knock, true) then
-                    if tonumber(sampGetNearestPlayer()) ~= -1 then
+                    local id = tonumber(sampGetNearestPlayer())
+                    if id ~= -1 then
+                        sampSendChat('/me сделав шаг вперёд, кинулся на человека, после схватил его за руку и повалил на землю, ..')
+                        wait(100)
+                        sampSendChat('/do .. нанеся несколько ударов по лицу.')
                         sampSendChat("/ko " .. sampGetNearestPlayer())
                         wait(300)
                     end
@@ -1871,7 +1877,7 @@ end
 
 function screenct()
     lua_thread.create(function ()
-        wait(150)
+        wait(350)
         if mainIni.config.screen_type then -- Используя модуль
             local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
             local fileName = os.date('%Y-%m-%d %H-%M-%S')
@@ -1893,8 +1899,7 @@ function scriptBody()
         wait(0)
 
         local pressed_screen = isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C) and true or false
-        local showed = true
-        if pressed_screen and mainIni.config.without_screen then showed = false end
+        local showed = true if pressed_screen and mainIni.config.without_screen then showed = false end
         displayHud(mainIni.config.shud and true or false)
 
         if showed and mainIni.config.hud then
