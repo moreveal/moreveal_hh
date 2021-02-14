@@ -415,7 +415,7 @@ function main()
 
         if test_as then
             if isKeyJustPressed(0x73) then -- F4
-                screenct()
+                makeScreen()
             end
             if isKeyJustPressed(0x74) then -- F5
                 sampAddChatMessage('[ Hitman Helper ]: Вы вышли из режима тестирования авто-скриншота', 0xCCCCCC)
@@ -688,9 +688,9 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
         local id = sampGetPlayerIdByNickname(v.name)
         if playerid == id and mainIni.temp.accept_ct ~= v.name then
             if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) and getCharArmour(select(2, sampGetCharHandleBySampPlayerId(playerid))) <= 0 then
-                sampAddChatMessage('[ Отстрел ]: Я нанес урон (-'..tostring(damage):match('(%d+)%.')..'HP) игроку {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
+                sampAddChatMessage('[ Отстрел ]: Я убил игрока {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
                 table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name..','..(otstrel_squad and 1 or 0))
-                if mainIni.config.autoscreen then screenct() end
+                if mainIni.config.autoscreen then makeScreen() end
                 if playerid == cfd then cfd = nil end
                 if v.name == sampGetPlayerNickname(playerid) then
                     v.time = os.time()
@@ -1107,12 +1107,10 @@ end
 function sampev.onServerMessage(color, text)
     if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.fakenick = false mainIni.temp.nametag = true end
     if acc_id ~= nil then
-        if text:find('{FF0000}<< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}>>') then
-            sampAddChatMessage(text, 0xFF0000)
+        if text:find('{FF0000}%<%< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}%>%>') then
             local ct_name = text:match('выполнил контракт на (.+), и получил')
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
             table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name..','..text:match('и получил {00BC12}(%d+%$)'))
-            return false
         end
         if text:find('{8B8B8B}Агент №'..acc_id..' {FF0000}принял контракт на: {8B8B8B}.-%[%d-%] {00AC31}Цена: %d-$ {cccccc}') then
             mainIni.temp.accept_ct = text:match('на: {8B8B8B}(.-)%[%d-%]')
@@ -1122,16 +1120,12 @@ function sampev.onServerMessage(color, text)
         end
     end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
-        sampAddChatMessage(text, 0x0088FF)
-        if mainIni.config.autoscreen then screenct() end
-        return false
+        if mainIni.config.autoscreen then makeScreen() end
     end
     if text:find('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]') then
-        sampAddChatMessage(text, 0xCCCCCC)
-        screenct()
+        makeScreen()
         local ammo, n = text:match('Я положил ящик на склад {......}%[ (.+) | (%d+) ]')
         table.insert(mainIni.stats, '3,'..(ammo:find(',') and ammo:gsub(',','.') or ammo)..','..os.time()..','..n)
-        return false
     end
     if text:find('{8B8B8B}Агентство: {FF0000}новый контракт {8B8B8B}.+{FF0000}, сумма {8B8B8B}%d+$ %[ /goc принять %]%[ /givec поручить %]') then
         local name = text:match('новый контракт {8B8B8B}(.-){')
@@ -1372,9 +1366,9 @@ function macrossesFunc()
                 if isKeysDown(macrosses_list.knock, true) then
                     local id = tonumber(sampGetNearestPlayer())
                     if id ~= -1 then
-                        sampSendChat('/me сделав шаг вперёд, кинулся на человека, после схватил его за руку и повалил на землю, ..')
+                        --[[sampSendChat('/me сделав шаг вперёд, кинулся на человека, после схватил его за руку и повалил на землю, ..')
                         wait(100)
-                        sampSendChat('/do .. нанеся несколько ударов по лицу.')
+                        sampSendChat('/do .. нанеся несколько ударов по лицу.')]]
                         sampSendChat("/ko " .. sampGetNearestPlayer())
                         wait(300)
                     end
@@ -1875,18 +1869,18 @@ function anonymizerSettings()
     sampShowDialog(D_ASETTING_ONE, 'Настройка анонимайзера', 'Название\tЗначение\nВключить/выключить\t'..(mainIni.config.anonymizer and '{008000}V' or '{ff0000}X')..'\n{cccccc}Добавить/редактировать\n{cccccc}Удалить\n'..(names ~= nil and names or ''), 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
-function screenct()
-    lua_thread.create(function ()
-        wait(350)
-        if mainIni.config.screen_type then -- Используя модуль
+function makeScreen()
+    if mainIni.config.screen_type then -- Используя модуль
+        lua_thread.create(function ()
+            wait(130)
             local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
             local fileName = os.date('%Y-%m-%d %H-%M-%S')
             screenshot.requestEx(filePath, fileName)
-        else -- Используя сторонние программы
-            for k, v in pairs(macrosses_list.screen) do goKeyPressed(v) end
-        end
-        sampAddChatMessage('Screenshot completed', 0x850000)
-    end)
+        end)
+    else -- Используя сторонние программы
+        for k, v in pairs(macrosses_list.screen) do goKeyPressed(v) end
+    end
+    --sampAddChatMessage('Screenshot completed', 0x850000)
 end
 
 function comma_value(n)
@@ -2330,10 +2324,8 @@ function sampev.onShowTextDraw(id, data)
     if id == 2239 then car.sport = data.boxColor ~= 671088640 and true or false end
 
     if mainIni.config.s_speed then
-        for _, v in pairs({2229, 2232, 2234, 2233, 2235, 2236, 2240, 2237, 2241, 2238, 2243, 2239, 2243, 2230, 2231, 2242}) do
-            if id == v then
-                return false
-            end
+        if id >= 2229 and id <= 2243 then
+            return false
         end
     end
 end
