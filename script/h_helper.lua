@@ -1872,7 +1872,7 @@ end
 function makeScreen()
     if mainIni.config.screen_type then -- »спользу€ модуль
         lua_thread.create(function ()
-            wait(130)
+            wait(170)
             local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
             local fileName = os.date('%Y-%m-%d %H-%M-%S')
             screenshot.requestEx(filePath, fileName)
