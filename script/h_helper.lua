@@ -517,7 +517,7 @@ end
 function loadOtstrelList(type)
     otstrel_list = {}
     local response = requests.get('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
-    for name in string.gmatch(response.text:match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do print(name) table.insert(otstrel_list, {name = name}) end
+    for name in string.gmatch(response.text:match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do table.insert(otstrel_list, {name = name}) end
 
     --[[local f = io.open(otstrel_path, 'r+')
     if f == nil then
