@@ -199,9 +199,9 @@ local D_AGENTSTATS_MAIN = 7143 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7144 -- диалог для просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 7145 -- диалог для просмотра работоспособности агента (3)
 
-local script_version = 44 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 45 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '1.7' -- версия для вывода в окне настроек, не изменять
+local text_version = '1.8' -- версия для вывода в окне настроек, не изменять
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
 
@@ -515,6 +515,10 @@ function sampGetNearestPlayer()
 end
 
 function loadOtstrelList(type)
+    otstrel_list = {}
+    local response = requests.get('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
+    for name in string.gmatch(response.text:match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do print(name) table.insert(otstrel_list, {name = name}) end
+
     --[[local f = io.open(otstrel_path, 'r+')
     if f == nil then
         f = io.open(otstrel_path, 'w') 
@@ -538,14 +542,14 @@ function loadOtstrelList(type)
     end
     f:close()]]
 
-    otstrel_list = {}
     --[[local response = requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/otstrel_list')
     for name in response.text:gmatch('[^\r\n]+') do table.insert(otstrel_list, {name = name}) end]]
-    if doesFileExist(otstrel_path) then
+
+    --[[if doesFileExist(otstrel_path) then
         local f = io.open(otstrel_path, 'r+')
         for name in f:lines() do table.insert(otstrel_list, {name = name}) end
         f:close()
-    end
+    end]]
 
     if type == 1 and mainIni.config.otstrel then
         local count, count_online = 0, 0
@@ -563,7 +567,7 @@ function loadOtstrelList(type)
                 count_online = count_online + 1
             end
         end
-        sampAddChatMessage('[ Отстрел ]: Всего в списке: '..count..'. В сети найдено: '..count_online..'.', 0xCCCCCC)
+        sampAddChatMessage('[ Отстрел ]: Игроков в сети: '..count_online..'.', 0xCCCCCC)
     end
 end
 
@@ -1108,9 +1112,11 @@ function sampev.onServerMessage(color, text)
     if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.fakenick = false mainIni.temp.nametag = true end
     if acc_id ~= nil then
         if text:find('{FF0000}%<%< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}%>%>') then
+            sampAddChatMessage(text, 0xFF0000)
             local ct_name = text:match('выполнил контракт на (.+), и получил')
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
             table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name..','..text:match('и получил {00BC12}(%d+%$)'))
+            return false
         end
         if text:find('{8B8B8B}Агент №'..acc_id..' {FF0000}принял контракт на: {8B8B8B}.-%[%d-%] {00AC31}Цена: %d-$ {cccccc}') then
             mainIni.temp.accept_ct = text:match('на: {8B8B8B}(.-)%[%d-%]')
@@ -1120,7 +1126,9 @@ function sampev.onServerMessage(color, text)
         end
     end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
+        sampAddChatMessage(text, 0x0088FF)
         if mainIni.config.autoscreen then makeScreen() end
+        return false
     end
     if text:find('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]') then
         makeScreen()
@@ -1350,7 +1358,7 @@ function statsMenu()
         if type == 2 then type_ots = tonumber(line:match('(%d+)$')) == 1 and true or false end
         points = points + (type == 1 and mainIni.config.points_contracts or (type == 2 and (type_ots and mainIni.config.points_otstrel_squad or mainIni.config.points_otstrel) or mainIni.config.points_ammo))
     end
-    sampShowDialog(D_AGENTSTATS_MAIN, 'Моя работоспособность ['..os.date('%d.%m.%Y')..']', 'Тип\tЗначение\n{cccccc}Суммарное количество набранных баллов:\t{0088FF}'..points..'{FFFFFF}\n{cccccc}Тип работы отстрела:\t'..'{cccccc}'..(otstrel_squad and 'Squad' or 'Solo')..'\nИнформация о выполненных контрактах\nИнформация о работе отстрела\nИнформация о доставленных боеприпасах\nНастройка баллов\n{cccccc}Очистить свою работоспособность', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_AGENTSTATS_MAIN, 'Моя работоспособность ['..os.date('%d.%m.%Y')..']', 'Тип\tЗначение\n{cccccc}Суммарное количество набранных баллов:\t{0088FF}'..points..'{FFFFFF}\n{cccccc}Тип работ отстрела:\t'..'{cccccc}'..(otstrel_squad and 'Squad' or 'Solo')..'\nИнформация о выполненных контрактах\nИнформация о работе отстрела\nИнформация о доставленных боеприпасах\nНастройка баллов\n{cccccc}Очистить свою работоспособность', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function macrossesFunc()
@@ -1646,12 +1654,9 @@ function dialogFunc()
                 if listitem == 9 then
                     mainIni.config.otstrel = not mainIni.config.otstrel
                     if mainIni.config.otstrel then
-                        if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
-                            local f = io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'w')
-                            f:close()
-                        end
-                        sampAddChatMessage('[ Hitman Helper ]: Вы включили чекер отстрела. Теперь необходимо заполнить список [/config/Hitman Helper/otstrel.txt]', 0xCCCCCC)
-                        sampAddChatMessage('[ Hitman Helper ]: Для просмотра людей из списка отстрела в сети, используйте - {FF6347}/otstrel_list [ '..layoutMacrossString(macrosses_list.otstrel)..' ]', 0xCCCCCC)
+                        --[[if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
+                            io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'w'):close()
+                        end]]
                         loadOtstrelList(1)
                     end
                 end
@@ -1872,7 +1877,7 @@ end
 function makeScreen()
     if mainIni.config.screen_type then -- Используя модуль
         lua_thread.create(function ()
-            wait(170)
+            wait(220)
             local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
             local fileName = os.date('%Y-%m-%d %H-%M-%S')
             screenshot.requestEx(filePath, fileName)
