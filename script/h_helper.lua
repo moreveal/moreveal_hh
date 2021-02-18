@@ -44,6 +44,7 @@ defaultIni = {
         shud = false,
         hud = true,
         screen_type = true,
+        otstrel_type = true,
         points_ammo = 1,
         points_contracts = 2,
         points_otstrel = 3.5,
@@ -516,8 +517,16 @@ end
 
 function loadOtstrelList(type)
     otstrel_list = {}
-    local response = requests.get('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
-    for name in string.gmatch(response.text:match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do table.insert(otstrel_list, {name = name}) end
+    if mainIni.config.otstrel_type then
+        local response = requests.get('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
+        for name in string.gmatch(response.text:match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do table.insert(otstrel_list, {name = name}) end
+    else
+        if doesFileExist(otstrel_path) then
+            local f = io.open(otstrel_path, 'r+')
+            for name in f:lines() do table.insert(otstrel_list, {name = name}) end
+            f:close()
+        end
+    end
 
     --[[local f = io.open(otstrel_path, 'r+')
     if f == nil then
@@ -545,12 +554,6 @@ function loadOtstrelList(type)
     --[[local response = requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/otstrel_list')
     for name in response.text:gmatch('[^\r\n]+') do table.insert(otstrel_list, {name = name}) end]]
 
-    --[[if doesFileExist(otstrel_path) then
-        local f = io.open(otstrel_path, 'r+')
-        for name in f:lines() do table.insert(otstrel_list, {name = name}) end
-        f:close()
-    end]]
-
     if type == 1 and mainIni.config.otstrel then
         local count, count_online = 0, 0
         for k, v in pairs(otstrel_list) do
@@ -567,7 +570,7 @@ function loadOtstrelList(type)
                 count_online = count_online + 1
             end
         end
-        sampAddChatMessage('[ Отстрел ]: Игроков в сети: '..count_online..'.', 0xCCCCCC)
+        sampAddChatMessage('[ Отстрел ]: Список загружен. Игроков в сети: '..count_online..'.', 0xCCCCCC)
     end
 end
 
@@ -1348,7 +1351,7 @@ function goKeyPressed(id)
 end
 
 function scriptMenu()
-    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{cccccc}Моя работоспособность\n{ffffff}Метод сохранения скриншотов:\t'..(mainIni.config.screen_type and 'Встроенный модуль' or 'Сочетание клавиш')..'\nТест авто-скриншота\nАвто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер контрактов\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на игроке в [/cfd]\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\nПостоянный поиск игрока в [/cfd]\t'..(mainIni.config.autofind and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока в [/cfd] на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_SETTING, '{ffffff}Настройка {cccccc}Hitman Helper {ffffff}| Версия: '..text_version, 'Название\tЗначение\n{cccccc}Последние нововведения\t'..'Версия: '..text_version..'\n{cccccc}Моя работоспособность\n{ffffff}Метод сохранения скриншотов:\t'..(mainIni.config.screen_type and 'Встроенный модуль' or 'Сочетание клавиш')..'\nМетод загрузки списка отстрела:\t'..(mainIni.config.otstrel_type and 'Автоматический' or 'Из файла')..'\nТест авто-скриншота\nАвто-скриншот выполненного контракта\t'..(mainIni.config.autoscreen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер контрактов\t'..(mainIni.config.cstream and '{008000}V' or '{ff0000}X')..'\n{ffffff}Метка на игроке в [/cfd]\t'..(mainIni.config.metka and '{008000}V' or '{ff0000}X')..'\nПостоянный поиск игрока в [/cfd]\t'..(mainIni.config.autofind and '{008000}V' or '{ff0000}X')..'\n{ffffff}Скрывать при скриншоте\t'..(mainIni.config.without_screen and '{008000}V' or '{ff0000}X')..'\n{ffffff}Чекер отстрела\t'..(mainIni.config.otstrel and '{008000}V' or '{ff0000}X')..'\n{ffffff}OOC-чат по умолчанию\t'..(mainIni.config.ooc_only and '{008000}V' or '{ff0000}X')..'\n{ffffff}Поиск игрока в [/cfd] на сторонних серверах\t'..(mainIni.config.search_other_servers and '{008000}V' or '{ff0000}X')..'\nКастомный худ\t'..(mainIni.config.hud and '{008000}V' or '{ff0000}X')..'\nИзмененные строки о взятии/отказе/выполнении контракта\t'..(mainIni.config.customctstr and '{008000}V' or '{ff0000}X')..'\nАвтоматическое пополнение счёта телефона\t'..(mainIni.config.automobile and '{008000}V' or '{ff0000}X')..'\nАвтоматическая заправка\t'..(mainIni.config.autofill and '{008000}V' or '{ff0000}X')..'\nКастомный [/id]\t'..(mainIni.config.customid and '{008000}V' or '{ff0000}X')..'\nСкрывать серверный спидометр\t'..(mainIni.config.s_speed and '{008000}V' or '{ff0000}X')..'\nНастройка чата\nНастройка анонимайзера\nНастройка названий оружий\nНастройка положения HUD\nНастройка макросов', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function statsMenu()
@@ -1633,7 +1636,8 @@ function dialogFunc()
                     openMenu = false
                 end
                 if listitem == 2 then mainIni.config.screen_type = not mainIni.config.screen_type end
-                if listitem == 3 then
+                if listitem == 3 then mainIni.config.otstrel_type = not mainIni.config.otstrel_type end
+                if listitem == 4 then
                     if mainIni.config.screen_type then
                         sampAddChatMessage('[ Hitman Helper ]: Сейчас скрипт использует метод сохранения скриншотов через встроенный в него модуль.', 0xCCCCCC)
                         sampAddChatMessage('[ Hitman Helper ]: По умолчанию скриншоты сохраняются по этому пути: [GTA San Andreas User Files/SAMP/screens]', 0xCCCCCC)
@@ -1646,40 +1650,47 @@ function dialogFunc()
                     test_as = true
                     openMenu = false
                 end
-                if listitem == 4 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
-                if listitem == 5 then mainIni.config.cstream = not mainIni.config.cstream end
-                if listitem == 6 then mainIni.config.metka = not mainIni.config.metka end
-                if listitem == 7 then mainIni.config.autofind = not mainIni.config.autofind end
-                if listitem == 8 then mainIni.config.without_screen = not mainIni.config.without_screen end
-                if listitem == 9 then
+                if listitem == 5 then mainIni.config.autoscreen = not mainIni.config.autoscreen end
+                if listitem == 6 then mainIni.config.cstream = not mainIni.config.cstream end
+                if listitem == 7 then mainIni.config.metka = not mainIni.config.metka end
+                if listitem == 8 then mainIni.config.autofind = not mainIni.config.autofind end
+                if listitem == 9 then mainIni.config.without_screen = not mainIni.config.without_screen end
+                if listitem == 10 then
                     mainIni.config.otstrel = not mainIni.config.otstrel
                     if mainIni.config.otstrel then
-                        --[[if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
+                        if not doesFileExist(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt') then
                             io.open(getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt', 'w'):close()
-                        end]]
+                        end
+                        if mainIni.config.otstrel_type then
+                            sampAddChatMessage('[ Hitman Helper ]: Вы включили чекер отстрела. Сейчас ники подгружаются автоматически из общего списка.', 0xCCCCCC)
+                        else
+                            sampAddChatMessage('[ Hitman Helper ]: Вы включили чекер отстрела. Сейчас ники подгружаются из файла [config/Hitman Helper/otstrel.txt]', 0xCCCCCC)
+                            sampAddChatMessage('[ Hitman Helper ]: Заполните его, перенося каждый ник на новую строку, после - перезагрузите скрипт', 0xCCCCCC)
+                        end
+                        sampAddChatMessage('[ Hitman Helper ]: Для изменения режима, отредактируйте его в настройках скрипта.', 0xCCCCCC)
                         loadOtstrelList(1)
                     end
                 end
-                if listitem == 10 then 
+                if listitem == 11 then 
                     mainIni.config.ooc_only = not mainIni.config.ooc_only
                     if mainIni.config.ooc_only then sampAddChatMessage('Вы включили OOC-чат по умолчанию. Для использования IC чата, введите ">" перед сообщением.', 0xCCCCCC) end
                 end
-                if listitem == 11 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
-                if listitem == 12 then mainIni.config.hud = not mainIni.config.hud end
-                if listitem == 13 then mainIni.config.customctstr = not mainIni.config.customctstr end
-                if listitem == 14 then mainIni.config.automobile = not mainIni.config.automobile end
-                if listitem == 15 then mainIni.config.autofill = not mainIni.config.autofill end
-                if listitem == 16 then mainIni.config.customid = not mainIni.config.customid end
-                if listitem == 17 then mainIni.config.s_speed = not mainIni.config.s_speed end
-                if listitem == 18 then
+                if listitem == 12 then mainIni.config.search_other_servers = not mainIni.config.search_other_servers end
+                if listitem == 13 then mainIni.config.hud = not mainIni.config.hud end
+                if listitem == 14 then mainIni.config.customctstr = not mainIni.config.customctstr end
+                if listitem == 15 then mainIni.config.automobile = not mainIni.config.automobile end
+                if listitem == 16 then mainIni.config.autofill = not mainIni.config.autofill end
+                if listitem == 17 then mainIni.config.customid = not mainIni.config.customid end
+                if listitem == 18 then mainIni.config.s_speed = not mainIni.config.s_speed end
+                if listitem == 19 then
                     chatSettings()
                     openMenu = false
                 end
-                if listitem == 19 then
+                if listitem == 20 then
                     anonymizerSettings()
                     openMenu = false
                 end
-                if listitem == 20 then
+                if listitem == 21 then
                     local weapon_line
                     for k, v in pairs(weapons_list) do
                         weapon_line = (weapon_line == nil and 'Текущее название оружия\tНовое значение\n'..v..'\t>>\n' or weapon_line..v..'\t>>\n')
@@ -1687,13 +1698,13 @@ function dialogFunc()
                     sampShowDialog(D_GSETTING_ONE, 'Настройка', weapon_line, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
                     openMenu = false
                 end
-                if listitem == 21 then
+                if listitem == 22 then
                     sampAddChatMessage('[ Hitman Helper ]: Перемещайте курсор для установки нового положения кастомного худа', 0xCCCCCC)
                     sampAddChatMessage('[ Hitman Helper ]: ЛКМ - установить новое положение | ПКМ - вернуть изначальное положение', 0xCCCCCC)
                     hud_move = true
                     openMenu = false
                 end
-                if listitem == 22 then
+                if listitem == 23 then
                     showSettingMacrosses()
                     openMenu = false
                 end
