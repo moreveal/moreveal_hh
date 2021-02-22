@@ -200,7 +200,7 @@ local D_AGENTSTATS_MAIN = 7143 -- диалог дл€ просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7144 -- диалог дл€ просмотра работоспособности агента (2)
 local D_AGENTSTATS_INFO = 7145 -- диалог дл€ просмотра работоспособности агента (3)
 
-local script_version = 45 --[[ »спользуетс€ дл€ автообновлени€, во избежание проблем 
+local script_version = 46 --[[ »спользуетс€ дл€ автообновлени€, во избежание проблем 
 с получением новых обновлений, рекомендуетс€ не измен€ть. ¬ случае их по€влени€ измените значение на "1" ]]
 local text_version = '1.8' -- верси€ дл€ вывода в окне настроек, не измен€ть
 
@@ -1127,6 +1127,9 @@ function sampev.onServerMessage(color, text)
         if text:find('{FF0000}%*%* {8B8B8B}.- поручил {FF0000}јгенту є{8B8B8B}'..acc_id..' {FF0000}выполнить контракт на: {8B8B8B}.- %*%*') then
             mainIni.temp.accept_ct = text:match('на: {8B8B8B}(.-) %*%*')
         end
+        if text:find('{FF0000}%*%* {8B8B8B}јгент є'..acc_id..' {FF0000}отказываетс€ выполн€ть контракт на: {8B8B8B}.+%[%d+%] {FF0000}%*%*') then
+            mainIni.temp.accept_ct = nil
+        end
     end
     if text == "{0088ff}[јгентство]: {FFFFFF}ƒеньги перечислены на ваш банковский счЄт" then
         sampAddChatMessage(text, 0x0088FF)
@@ -1888,7 +1891,7 @@ end
 function makeScreen()
     if mainIni.config.screen_type then -- »спользу€ модуль
         lua_thread.create(function ()
-            wait(220)
+            wait(240)
             local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
             local fileName = os.date('%Y-%m-%d %H-%M-%S')
             screenshot.requestEx(filePath, fileName)
@@ -2038,7 +2041,7 @@ function scriptBody()
 
         if mainIni.config.cstream then
             lua_thread.create(function ()
-                if os.clock() - time_stream >= 10 then
+                if (os.clock() - time_stream >= 10) and not sampIsDialogActive() then
                     c_ids = {}
                     sampSendChat('/contractas')
                     openContractas = true
