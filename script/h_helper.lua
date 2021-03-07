@@ -37,6 +37,196 @@ local sizeX, sizeY = getScreenResolution()
 
 local MenuListID = 0
 
+sw, sh = getScreenResolution()
+
+defaultIni = {
+    config = {
+        cstream = false,
+        autoscreen = false,
+        automobile = false,
+        autofill = false,
+        customid = false,
+        s_speed = false,
+        customctstr = false,
+        macrosses = true,
+        metka = false,
+        autofind = true,
+        without_screen = false,
+        otstrel = false,
+        ooc_only = false,
+        search_other_servers = false,
+        onlypp = false,
+        autoupdate = false,
+        anonymizer = false,
+        shud = false,
+        hud = true,
+        screen_type = true,
+        otstrel_type = true,
+        points_ammo = 0.5,
+        points_contracts = 2,
+        points_otstrel = 3.5,
+        points_otstrel_squad = 3
+    },
+    
+    temp = {
+        nametag = true,
+        fakenick = false,
+        accept_ct = 'Nick_Name',
+        last_ct = 'Nick_Name'
+    },
+
+    otstrel_list = {
+        nil,
+    },
+
+    stats = {
+        nil,
+    },
+
+    chat = {
+        misli = true,
+        p_adm = true,
+        frac = true,
+        fam = true,
+        ads = true,
+        invites = true,
+        gos_ads = true,
+        a_adm = true,
+        news_cnn = true,
+        news_sekta = true,
+        hit_ads = true,
+        propose = true
+    },
+
+    weapons = {
+        [1] = 'Fist',
+        [2] = 'Brass Knuckles',
+        [3] = 'Golf Club',
+        [4] = 'Nitestick',
+        [5] = 'Knife',
+        [6] = 'Baseball Bat',
+        [7] = 'Shovel',
+        [8] = 'Pool Cue',
+        [9] = 'Kantana',
+        [10] = 'Chainsaw',
+        [11] = 'Purple Dildo',
+        [12] = 'Short Vibrator',
+        [13] = 'Long Vibrator',
+        [14] = 'White Dildo',
+        [15] = 'Flowers',
+        [16] = 'Cane',
+        [17] = 'Grenade',
+        [18] = 'Tear Gas',
+        [19] = 'Molotov Cocktail',
+        [22] = '9mm Pistol',
+        [23] = 'Silenced 9mm',
+        [24] = 'Desert Eagle',
+        [25] = 'Shotgun',
+        [26] = 'Sawn-off Shotgun',
+        [27] = 'Combat Shotgun',
+        [28] = 'Micro Uzi',
+        [29] = 'MP5',
+        [30] = 'AK-47',
+        [31] = 'M4',
+        [32] = 'Tec-9',
+        [33] = 'Country Rifle',
+        [34] = 'Sniper Rifle',
+        [35] = 'RPG',
+        [36] = 'HS Rocket',
+        [37] = 'Flamethrower',
+        [38] = 'Minigun',
+        [39] = 'Satchel Charge',
+        [40] = 'Detonator',
+        [41] = 'Spraycan',
+        [42] = 'Fire Extinguisher',
+        [43] = 'Camera',
+        [44] = 'Night Vision',
+        [45] = 'Thermal Goggles',
+        [46] = 'Parachute'      
+    },
+
+    hud = {
+        xpos = sw - 359,
+        ypos = sh - 48
+    },
+
+    macrosses = {
+        knock = 90 ..' + '.. 221,
+        boot = 90 ..' + '.. 219,
+        members = 90 ..' + '.. 186,
+        contracts = 90 ..' + '.. 222,
+        cancel = 90 .. ' + '.. 190,
+        getct = 190 .. ' + '.. 191,
+        myc = 90 .. ' + '.. 188,
+        invis = 88 .. ' + '.. 90,
+        otstrel = 90 .. ' + '.. 76,
+        admins = 90 .. ' + '.. 75,
+        setting = 35,
+        screen = 119,
+        find = 88 .. ' + '.. 87,
+        takect = 75,
+        tempname_otstrel = 90 .. ' + ' .. 49,
+        tempname_contracts = 90 .. ' + ' .. 50,
+        tempname_trainings = 90 .. ' + ' .. 51
+    },
+
+    tempname = {
+        otstrel = 'Nick_Name',
+        contracts = 'Nick_Name',
+        trainings = 'Nick_Name'
+    }
+}
+
+local otstrel_list = {} -- люди, состоящие в списке отстрела
+local otstrel_online = {} -- люди, состоящие в списке отстрела онлайн
+local car = {
+    engine = false,
+    light = false,
+    lock = false,
+    sport = false,
+    health = 1000,
+    fuel = 100,
+    speed = 0
+}
+
+local autogoc_price = 0
+local carmenu_count = 0
+local nkeys_bind = {} -- хранит id клавиш при изменении макроса
+
+local anonymizer_path = getWorkingDirectory()..'/config/Hitman Helper/anonymizer.txt'
+local otstrel_path = getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt'
+
+local D_SETCOLOR = 7130 -- диалог для выбора цвета
+local D_INVALID = 7131 -- диалог, использующийся для вывода информации
+local D_MSETTING = 7132 -- диалог для настройки макросов
+
+local D_ASETTING_ONE = 7133 -- диалог для настройки анонимайзера (1)
+local D_ASETTING_TWO = 7134 -- диалог для настройки анонимайзера (2)
+local D_ASETTING_THREE = 7135 -- диалог для настройки анонимайзера (3)
+
+local D_GSETTING_ONE = 7136 -- диалог для настройки названия оружий (1)
+local D_GSETTING_TWO = 7137 -- диалог для настройки названия оружий (2)
+
+local D_TNSETTING_ONE = 7138 -- диалог для выбора временного никнейма (1)
+local D_TNSETTING_TWO = 7139 -- диалог для выбора временного никнейма (2)
+local D_TNSETTING_THREE = 7140 -- диалог для выбора временного никнейма (3)
+
+local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента (Основной)
+local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
+local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
+
+local script_version = 48 --[[ Используется для автообновления, во избежание проблем 
+с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
+local text_version = '1.9' -- версия для вывода в окне настроек, не изменять
+
+local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
+
+local time_find = os.clock() -- таймер /find
+local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
+
+font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
+font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- подключение шрифта для остального текста
+
 function httpRequest(request, body, handler) -- copas.http
     -- start polling task
     if not copas.running then
@@ -329,6 +519,7 @@ local newFrame = imgui.OnFrame(
                                 statsMenu()
                                 ScriptMainMenu[0] = false
                                 lockPlayerControl(false)
+                                inicfg.save(mainIni, config_path)
                             end
 						imgui.PopFont()
 					imgui.EndChild()
@@ -429,6 +620,7 @@ local newFrame = imgui.OnFrame(
                                             test_as = true
                                             ScriptMainMenu[0] = false
                                             lockPlayerControl(false)
+                                            inicfg.save(mainIni, config_path)
                                         end
 										imgui.CreatePaddingY(8)
 										if mimgui.CustomCheckbox(u8'Скрывать скрипт при скриншоте', cb_wscreen) then 
@@ -460,6 +652,7 @@ local newFrame = imgui.OnFrame(
                                                 hud_move = true
                                                 ScriptMainMenu[0] = false
                                                 lockPlayerControl(false)
+                                                inicfg.save(mainIni, config_path)
                                             end
 										imgui.PopStyleVar()
 										imgui.PopStyleColor(3)
@@ -619,6 +812,7 @@ local newFrame = imgui.OnFrame(
                                                     showSettingMacrosses()
                                                     ScriptMainMenu[0] = false
                                                     lockPlayerControl(false)
+                                                    inicfg.save(mainIni, config_path)
                                                 end
 											imgui.EndChild()
 										imgui.PopStyleVar()
@@ -644,6 +838,7 @@ local newFrame = imgui.OnFrame(
                                                     weaponSettings()
                                                     ScriptMainMenu[0] = false
                                                     lockPlayerControl(false)
+                                                    inicfg.save(mainIni, config_path)
                                                 end
 											imgui.EndChild()
 										imgui.PopStyleVar()
@@ -669,6 +864,7 @@ local newFrame = imgui.OnFrame(
                                                     anonymizerSettings()
                                                     ScriptMainMenu[0] = false
                                                     lockPlayerControl(false)
+                                                    inicfg.save(mainIni, config_path)
                                                 end
 											imgui.EndChild()
 										imgui.PopStyleVar()
@@ -720,195 +916,6 @@ local newFrame = imgui.OnFrame(
 		imgui.PopStyleColor(3)
     end
 )
-sw, sh = getScreenResolution()
-
-defaultIni = {
-    config = {
-        cstream = false,
-        autoscreen = false,
-        automobile = false,
-        autofill = false,
-        customid = false,
-        s_speed = false,
-        customctstr = false,
-        macrosses = true,
-        metka = false,
-        autofind = true,
-        without_screen = false,
-        otstrel = false,
-        ooc_only = false,
-        search_other_servers = false,
-        onlypp = false,
-        autoupdate = false,
-        anonymizer = false,
-        shud = false,
-        hud = true,
-        screen_type = true,
-        otstrel_type = true,
-        points_ammo = 0.5,
-        points_contracts = 2,
-        points_otstrel = 3.5,
-        points_otstrel_squad = 3
-    },
-    
-    temp = {
-        nametag = true,
-        fakenick = false,
-        accept_ct = 'Nick_Name',
-        last_ct = 'Nick_Name'
-    },
-
-    otstrel_list = {
-        nil,
-    },
-
-    stats = {
-        nil,
-    },
-
-    chat = {
-        misli = true,
-        p_adm = true,
-        frac = true,
-        fam = true,
-        ads = true,
-        invites = true,
-        gos_ads = true,
-        a_adm = true,
-        news_cnn = true,
-        news_sekta = true,
-        hit_ads = true,
-        propose = true
-    },
-
-    weapons = {
-        [1] = 'Fist',
-        [2] = 'Brass Knuckles',
-        [3] = 'Golf Club',
-        [4] = 'Nitestick',
-        [5] = 'Knife',
-        [6] = 'Baseball Bat',
-        [7] = 'Shovel',
-        [8] = 'Pool Cue',
-        [9] = 'Kantana',
-        [10] = 'Chainsaw',
-        [11] = 'Purple Dildo',
-        [12] = 'Short Vibrator',
-        [13] = 'Long Vibrator',
-        [14] = 'White Dildo',
-        [15] = 'Flowers',
-        [16] = 'Cane',
-        [17] = 'Grenade',
-        [18] = 'Tear Gas',
-        [19] = 'Molotov Cocktail',
-        [22] = '9mm Pistol',
-        [23] = 'Silenced 9mm',
-        [24] = 'Desert Eagle',
-        [25] = 'Shotgun',
-        [26] = 'Sawn-off Shotgun',
-        [27] = 'Combat Shotgun',
-        [28] = 'Micro Uzi',
-        [29] = 'MP5',
-        [30] = 'AK-47',
-        [31] = 'M4',
-        [32] = 'Tec-9',
-        [33] = 'Country Rifle',
-        [34] = 'Sniper Rifle',
-        [35] = 'RPG',
-        [36] = 'HS Rocket',
-        [37] = 'Flamethrower',
-        [38] = 'Minigun',
-        [39] = 'Satchel Charge',
-        [40] = 'Detonator',
-        [41] = 'Spraycan',
-        [42] = 'Fire Extinguisher',
-        [43] = 'Camera',
-        [44] = 'Night Vision',
-        [45] = 'Thermal Goggles',
-        [46] = 'Parachute'      
-    },
-
-    hud = {
-        xpos = sw - 359,
-        ypos = sh - 48
-    },
-
-    macrosses = {
-        knock = 90 ..' + '.. 221,
-        boot = 90 ..' + '.. 219,
-        members = 90 ..' + '.. 186,
-        contracts = 90 ..' + '.. 222,
-        cancel = 90 .. ' + '.. 190,
-        getct = 190 .. ' + '.. 191,
-        myc = 90 .. ' + '.. 188,
-        invis = 88 .. ' + '.. 90,
-        otstrel = 90 .. ' + '.. 76,
-        admins = 90 .. ' + '.. 75,
-        setting = 35,
-        screen = 119,
-        find = 88 .. ' + '.. 87,
-        takect = 75,
-        tempname_otstrel = 90 .. ' + ' .. 49,
-        tempname_contracts = 90 .. ' + ' .. 50,
-        tempname_trainings = 90 .. ' + ' .. 51
-    },
-
-    tempname = {
-        otstrel = 'Nick_Name',
-        contracts = 'Nick_Name',
-        trainings = 'Nick_Name'
-    }
-}
-
-local otstrel_list = {} -- люди, состоящие в списке отстрела
-local otstrel_online = {} -- люди, состоящие в списке отстрела онлайн
-local car = {
-    engine = false,
-    light = false,
-    lock = false,
-    sport = false,
-    health = 1000,
-    fuel = 100,
-    speed = 0
-}
-
-local autogoc_price = 0
-local carmenu_count = 0
-local nkeys_bind = {} -- хранит id клавиш при изменении макроса
-
-local anonymizer_path = getWorkingDirectory()..'/config/Hitman Helper/anonymizer.txt'
-local otstrel_path = getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt'
-
-local D_SETCOLOR = 7130 -- диалог для выбора цвета
-local D_INVALID = 7131 -- диалог, использующийся для вывода информации
-local D_MSETTING = 7132 -- диалог для настройки макросов
-
-local D_ASETTING_ONE = 7133 -- диалог для настройки анонимайзера (1)
-local D_ASETTING_TWO = 7134 -- диалог для настройки анонимайзера (2)
-local D_ASETTING_THREE = 7135 -- диалог для настройки анонимайзера (3)
-
-local D_GSETTING_ONE = 7136 -- диалог для настройки названия оружий (1)
-local D_GSETTING_TWO = 7137 -- диалог для настройки названия оружий (2)
-
-local D_TNSETTING_ONE = 7138 -- диалог для выбора временного никнейма (1)
-local D_TNSETTING_TWO = 7139 -- диалог для выбора временного никнейма (2)
-local D_TNSETTING_THREE = 7140 -- диалог для выбора временного никнейма (3)
-
-local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента (1)
-local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (2)
-local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (3)
-
-local script_version = 47 --[[ Используется для автообновления, во избежание проблем 
-с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '1.9' -- версия для вывода в окне настроек, не изменять
-
-local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
-
-local time_find = os.clock() -- таймер /find
-local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
-
-font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
-font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- подключение шрифта для остального текста
 
 function main()
     if not isSampLoaded() or not isSampfuncsLoaded() then return end
@@ -1155,12 +1162,14 @@ function main()
             if isKeyJustPressed(0x01) then
                 showCursor(false, false)
                 hud_move = false
+                inicfg.save(mainIni, config_path)
             end
             if isKeyJustPressed(0x02) then
                 mainIni.hud.xpos = sw - 359
                 mainIni.hud.ypos = sh - 48
                 showCursor(false, false)
                 hud_move = false
+                inicfg.save(mainIni, config_path)
             end
         end
 
@@ -1423,7 +1432,7 @@ end
 function showSettingMacrosses()
     local macrosses_array = {}
     for k, v in pairs(macrosses_list) do macrosses_array[k] = layoutMacrossString(k) end
-    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nВзять последний пришедший контракт:\t'..macrosses_array.takect..'\nВременный ник [Отстрел]:\t'..macrosses_array.tempname_otstrel..'\nВременный ник [Контракты]:\t'..macrosses_array.tempname_contracts..'\nВременный ник [Тренировки]:\t'..macrosses_array.tempname_trainings..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить/выключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nВзять последний пришедший контракт:\t'..macrosses_array.takect..'\nВременный ник [Отстрел]:\t'..macrosses_array.tempname_otstrel..'\nВременный ник [Контракты]:\t'..macrosses_array.tempname_contracts..'\nВременный ник [Тренировки]:\t'..macrosses_array.tempname_trainings..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function layoutMacrossString(m_key)
@@ -2127,6 +2136,7 @@ function macrossesFunc()
         if isKeysDown(macrosses_list.setting, true) and not isPauseMenuActive() and not sampIsChatInputActive() and not sampIsDialogActive() then
             ScriptMainMenu[0] = not ScriptMainMenu[0]
             lockPlayerControl(ScriptMainMenu[0])
+            inicfg.save(mainIni, config_path)
             wait(250)
         end
 
@@ -2179,8 +2189,12 @@ function macrossesFunc()
                     wait(300)
 
                 elseif isKeysDown(macrosses_list.invis, true) then
-                    sampSendChat('/hmenu')
-                    incInvis = true
+                    if getInvisibility(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) then
+                        sampSendChat('/inv')
+                    else
+                        sampSendChat('/hmenu')
+                        incInvis = true
+                    end
                     wait(300)
 
                 elseif isKeysDown(macrosses_list.otstrel, true) then
@@ -2264,6 +2278,7 @@ function dialogFunc()
             elseif listitem == 16 then setting_bind = 'tempname_contracts'
             elseif listitem == 17 then setting_bind = 'tempname_trainings'
             elseif listitem == 18 then setting_bind = 'setting' end 
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_ONE)
@@ -2296,6 +2311,7 @@ function dialogFunc()
                 openMenu = false
             end
             if openMenu then anonymizerSettings() end
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_TWO)
@@ -2325,6 +2341,7 @@ function dialogFunc()
                     scriptMessage('Никнеймы и маски не должны повторяться. Сперва вы должны удалить старую запись')
                 end
             end
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_THREE)
@@ -2346,6 +2363,7 @@ function dialogFunc()
             else
                 scriptMessage('Запись по запросу "'..input..'" не обнаружена')
             end
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_SETCOLOR)
@@ -2364,6 +2382,7 @@ function dialogFunc()
                 gun = weapons_list[listitem + 3]
             end
             sampShowDialog(D_GSETTING_TWO, 'Настройка', 'Введите новое название для '..gun, 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_GSETTING_TWO)
@@ -2378,12 +2397,14 @@ function dialogFunc()
             end
             weapons_list[weapon_id] = input
             scriptMessage('Название оружия успешно изменено на "'..input..'"')
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_ONE)
         if result and button == 1 then
             current_tempname = (listitem == 0 and 'otstrel' or (listitem == 1 and 'contracts' or 'trainings'))
             sampShowDialog(D_TNSETTING_TWO, 'Взаимодействие', 'Установить\nРедактировать', 'Ок', 'Отмена', DIALOG_STYLE_LIST)
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_TWO)
@@ -2393,12 +2414,14 @@ function dialogFunc()
             elseif listitem == 1 then
                 sampShowDialog(D_TNSETTING_THREE, 'Редактирование', '{FFFFFF}Введите желаемый никнейм:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
             end
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_THREE)
         if result and button == 1 then
             mainIni['tempname'][current_tempname] = input
             sampShowDialog(D_TNSETTING_ONE, ' ', 'Тип\tВременный никнейм\n{FF6347}Отстрел\t{FFFFFF}'..mainIni.tempname.otstrel..'\n{FF6347}Контракты\t{FFFFFF}'..mainIni.tempname.contracts..'\n{FF6347}Тренировки\t{FFFFFF}'..mainIni.tempname.trainings, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_INFO)
@@ -2451,6 +2474,7 @@ function dialogFunc()
 
                 sampShowDialog(D_INVALID, 'Информация о '..(agentstats_type == 1 and 'выполненных контрактах' or (agentstats_type == 2 and 'работе отстрела' or 'принесенных боеприпасах'))..' ['..g_date..']', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
             end
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_POINTS)
@@ -2462,6 +2486,7 @@ function dialogFunc()
                 agentstats_points = (listitem == 0 and 'points_contracts' or (listitem == 1 and 'points_otstrel' or (listitem == 2 and 'points_otstrel_squad' or 'points_ammo')))
                 sampShowDialog(D_AGENTSTATS_POINTS, 'Настройка баллов', 'Введите новое значение баллов:', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
             end
+            inicfg.save(mainIni, config_path)
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_AGENTSTATS_MAIN)
@@ -2490,6 +2515,7 @@ function dialogFunc()
                     sampShowDialog(D_AGENTSTATS_MAIN, 'Предупреждение', 'При очистке вашей работоспособности, восстановить её уже не получится.\nВы уверены, что желаете это сделать?', 'Да', 'Нет', DIALOG_STYLE_MSGBOX)
                 end
             end
+            inicfg.save(mainIni, config_path)
         end
     end
 end
@@ -2953,6 +2979,7 @@ function onWindowMessage(msg, wparam, lparam)
                 consumeWindowMessage(true, false)
                 ScriptMainMenu[0] = false
                 lockPlayerControl(false)
+                inicfg.save(mainIni, config_path)
             end
 			if setting_bind ~= nil then
                 consumeWindowMessage(true, false)
