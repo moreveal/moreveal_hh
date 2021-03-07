@@ -5,12 +5,15 @@ local inicfg = require 'inicfg'
 local vkeys = require 'vkeys'
 local socket = require 'luasocket.socket'
 
+local copas = require 'copas'
+local http = require 'copas.http'
+
 local imgui = require 'mimgui'
 local mimgui = require 'mimgui_addons'
 
 local encoding = require 'encoding'
 encoding.default = 'CP1251'
-u8 = encoding.UTF8
+local u8 = encoding.UTF8
 
 local memory = require 'memory'
 local ffi = require "ffi"
@@ -26,7 +29,6 @@ local lastdamage = {} -- информация о последнем попадании
 
 local fa = require('fAwesome5')
 
-local ffi = require 'ffi'
 local wm = require 'windows.message'
 local new, str, sizeof = imgui.new, ffi.string, ffi.sizeof
 
@@ -34,6 +36,37 @@ local ScriptMainMenu, freezePlayer, removeCursor = new.bool(), new.bool(), new.b
 local sizeX, sizeY = getScreenResolution()
 
 local MenuListID = 0
+
+function httpRequest(request, body, handler) -- copas.http
+    -- start polling task
+    if not copas.running then
+        copas.running = true
+        lua_thread.create(function()
+            wait(0)
+            while not copas.finished() do
+                local ok, err = copas.step(0)
+                if ok == nil then error(err) end
+                wait(0)
+            end
+            copas.running = false
+        end)
+    end
+    -- do request
+    if handler then
+        return copas.addthread(function(r, b, h)
+            copas.setErrorHandler(function(err) h(nil, err) end)
+            h(http.request(r, b))
+        end, request, body, handler)
+    else
+        local results
+        local thread = copas.addthread(function(r, b)
+            copas.setErrorHandler(function(err) results = {nil, err} end)
+            results = table.pack(http.request(r, b))
+        end, request, body)
+        while coroutine.status(thread) ~= 'dead' do wait(0) end
+        return table.unpack(results)
+    end
+end
 
 function imgui.TextColoredRGB(text)
     local style = imgui.GetStyle()
@@ -385,13 +418,13 @@ local newFrame = imgui.OnFrame(
 										imgui.SetCursorPosX((imgui.GetWindowWidth() - 130)/2)
 										if mimgui.CustomButton("bttn_screenshot", "Тест скриншота", imgui.ImVec2(130, 30)) then 
                                             if mainIni.config.screen_type then
-                                                sampAddChatMessage('[ Hitman Helper ]: Сейчас скрипт использует метод сохранения скриншотов через встроенный в него модуль.', 0xCCCCCC)
-                                                sampAddChatMessage('[ Hitman Helper ]: По умолчанию скриншоты сохраняются по этому пути: [GTA San Andreas User Files/SAMP/screens]', 0xCCCCCC)
-                                                sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт сделал скриншот, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
+                                                scriptMessage('Сейчас скрипт использует метод сохранения скриншотов через встроенный в него модуль.')
+                                                scriptMessage('По умолчанию скриншоты сохраняются по этому пути: [GTA San Andreas User Files/SAMP/screens]')
+                                                scriptMessage('Нажмите F4, чтобы скрипт сделал скриншот, либо F5, чтобы выйти из этого режима')
                                             else
-                                                sampAddChatMessage('[ Hitman Helper ]: После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]', 0xCCCCCC)
-                                                sampAddChatMessage('[ Hitman Helper ]: Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов', 0xCCCCCC)
-                                                sampAddChatMessage('[ Hitman Helper ]: Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима', 0xCCCCCC)
+                                                scriptMessage('После выполненного контракта скрипт автоматически нажимает сочетание клавиш [ '..layoutMacrossString('screen')..' ]')
+                                                scriptMessage('Вам необходимо выбрать это сочетание клавиш в любой программе для сохранения скриншотов')
+                                                scriptMessage('Нажмите F4, чтобы скрипт нажал данное сочетание клавиш, либо F5, чтобы выйти из этого режима')
                                             end
                                             test_as = true
                                             ScriptMainMenu[0] = false
@@ -422,8 +455,8 @@ local newFrame = imgui.OnFrame(
 										imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(0.0, 0.0))
 											imgui.SetCursorPosX((imgui.GetWindowWidth() - 130)/2)
 											if mimgui.CustomButton("bttn_hudpos", "Изменить положение", imgui.ImVec2(130, 30)) then 
-                                                sampAddChatMessage('[ Hitman Helper ]: Перемещайте курсор для установки нового положения кастомного худа', 0xCCCCCC)
-                                                sampAddChatMessage('[ Hitman Helper ]: ЛКМ - установить новое положение | ПКМ - вернуть изначальное положение', 0xCCCCCC)
+                                                scriptMessage('Перемещайте курсор для установки нового положения кастомного худа')
+                                                scriptMessage('ЛКМ - установить новое положение | ПКМ - установить положение по умолчанию')
                                                 hud_move = true
                                                 ScriptMainMenu[0] = false
                                                 lockPlayerControl(false)
@@ -607,7 +640,7 @@ local newFrame = imgui.OnFrame(
 										imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(0.0, 0.0))
 											imgui.SetCursorPosY((imgui.GetWindowHeight() - 60)/2)
 											imgui.BeginChild("macros_settinsg_bttn", imgui.ImVec2(-1, 60), true)
-												if imgui.Button(u8"Перейти к настройке\n    названий оружий", imgui.ImVec2(-1, -1)) then 
+												if imgui.Button(u8"Перейти к настройке\n           названий", imgui.ImVec2(-1, -1)) then 
                                                     weaponSettings()
                                                     ScriptMainMenu[0] = false
                                                     lockPlayerControl(false)
@@ -674,19 +707,7 @@ local newFrame = imgui.OnFrame(
 										imgui.SetCursorPosX((imgui.GetWindowWidth() - 270)/2)
 										imgui.Image(CreateChangelogImgTexture, imgui.ImVec2(270, 65))
 										imgui.Separator()
-										imgui.CenterTextColoredRGB("Версия 1.7\n\
-- Изменены макросы по умолчанию, добавлены новые\n\
-- Реализован показ метки на голове игрока без постоянного поиска за ним\n\
-- Подкорректирована система подсчёта баллов\n\
-- Дополнительный метод сохранения скриншотов\n\
-- Некоторые косметические изменения\n \n\
-Версия 1.8\n\
-- Добавлена возможность выбора метода подгрузки списка отстрела\n\
-- Исправление найденных недоработок\n \n\
-Версия 1.9\n\
-- Смена интерфейса\n\
-- Небольшие изменения в коде\n\
-- Исправление найденных недоработок")
+										imgui.CenterTextColoredRGB(changelog)
 									imgui.EndChild()
 								imgui.PopFont()
 							imgui.PopStyleVar(3)
@@ -724,7 +745,7 @@ defaultIni = {
         hud = true,
         screen_type = true,
         otstrel_type = true,
-        points_ammo = 1,
+        points_ammo = 0.5,
         points_contracts = 2,
         points_otstrel = 3.5,
         points_otstrel_squad = 3
@@ -860,23 +881,22 @@ local otstrel_path = getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt'
 
 local D_SETCOLOR = 7130 -- диалог для выбора цвета
 local D_INVALID = 7131 -- диалог, использующийся для вывода информации
-local D_CSETTING = 7132 -- диалог для настройки чата
-local D_MSETTING = 7133 -- диалог для настройки макросов
+local D_MSETTING = 7132 -- диалог для настройки макросов
 
-local D_ASETTING_ONE = 7134 -- диалог для настройки анонимайзера (1)
-local D_ASETTING_TWO = 7135 -- диалог для настройки анонимайзера (2)
-local D_ASETTING_THREE = 7136 -- диалог для настройки анонимайзера (3)
+local D_ASETTING_ONE = 7133 -- диалог для настройки анонимайзера (1)
+local D_ASETTING_TWO = 7134 -- диалог для настройки анонимайзера (2)
+local D_ASETTING_THREE = 7135 -- диалог для настройки анонимайзера (3)
 
-local D_GSETTING_ONE = 7137 -- диалог для настройки названия оружий (1)
-local D_GSETTING_TWO = 7138 -- диалог для настройки названия оружий (2)
+local D_GSETTING_ONE = 7136 -- диалог для настройки названия оружий (1)
+local D_GSETTING_TWO = 7137 -- диалог для настройки названия оружий (2)
 
-local D_TNSETTING_ONE = 7139 -- диалог для выбора временного никнейма (1)
-local D_TNSETTING_TWO = 7140 -- диалог для выбора временного никнейма (2)
-local D_TNSETTING_THREE = 7141 -- диалог для выбора временного никнейма (3)
+local D_TNSETTING_ONE = 7138 -- диалог для выбора временного никнейма (1)
+local D_TNSETTING_TWO = 7139 -- диалог для выбора временного никнейма (2)
+local D_TNSETTING_THREE = 7140 -- диалог для выбора временного никнейма (3)
 
-local D_AGENTSTATS_MAIN = 7142 -- диалог для просмотра работоспособности агента (1)
-local D_AGENTSTATS_POINTS = 7143 -- диалог для просмотра работоспособности агента (2)
-local D_AGENTSTATS_INFO = 7144 -- диалог для просмотра работоспособности агента (3)
+local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента (1)
+local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (2)
+local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (3)
 
 local script_version = 47 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
@@ -935,15 +955,17 @@ function main()
     cb_metka = new.bool(mainIni.config.metka)
     cb_autofind = new.bool(mainIni.config.autofind)
 
-    if not doesFileExist(getWorkingDirectory()..'/lib/requests.lua') then
-        downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/lib/requests/requests.lua', getWorkingDirectory()..'/lib/requests.lua', function(id, status)  end)
+    if not doesFileExist(getFolderPath(0x14)..'/10089.ttf') or not doesFileExist(getFolderPath(0x14)..'/BAHNSCHRIFT.ttf') then
+        downloadUrlToFile('https://github.com/moreveal/moreveal_hh/blob/main/fonts/10089.TTF?raw=true', getFolderPath(0x14)..'/10089.ttf', function(id, status) end)
         wait(1000)
-    elseif not doesFileExist(getWorkingDirectory()..'/lib/screenshot.lua') or not doesFileExist(getGameDirectory()..'/Screenshot.asi') then
+        downloadUrlToFile('https://github.com/moreveal/moreveal_hh/blob/main/fonts/BAHNSCHRIFT.TTF?raw=true', getFolderPath(0x14)..'/BAHNSCHRIFT.ttf', function(id, status) end)
+        wait(1000)
+    end
+    if not doesFileExist(getWorkingDirectory()..'/lib/screenshot.lua') or not doesFileExist(getGameDirectory()..'/Screenshot.asi') then
         downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/lib/screenshot/screenshot.lua', getWorkingDirectory()..'/lib/screenshot.lua', function(id, status) end)
         downloadUrlToFile('https://github.com/moreveal/moreveal_hh/raw/main/lib/screenshot/Screenshot.asi', getGameDirectory()..'/Screenshot.asi', function(id, status) end)
         wait(3000)
     end
-    requests = require 'requests'
     screenshot = require 'screenshot'
 
     local ip = select(1, sampGetCurrentServerAddress())..':'..select(2, sampGetCurrentServerAddress())
@@ -976,26 +998,39 @@ function main()
 
     if mainIni.config.anonymizer then
         for k, v in pairs(anonymizer_names) do
-            local name = v:match('(.+) =')
-            local mask = v:match('= (.+)')
+            local name, mask = v:match('(.+) = (.+)')
             if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampGetPlayerIdByNickname(name) ~= -1 then
                 changeName(name, mask)
             end
         end
     else
         for k, v in pairs(anonymizer_names) do
-            local name = v:match('(.+) =')
-            local mask = v:match('= (.+)')
+            local name, mask = v:match('(.+) = (.+)')
             if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampGetPlayerIdByNickname(mask) ~= -1 then
                 changeName(mask, name)
             end
         end
     end
 
-    local response = requests.get(update_url)
-    new_version, text_new_version = response.text:match('(%d+) | (.+)')
-    if tonumber(new_version) > script_version then updateScript() update = true end
-    changelog = u8:decode(requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/last_news.txt').text)
+    local list = {
+        update_url,
+        'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/last_news.txt'
+    }
+
+    for index, url in pairs(list) do
+        httpRequest(url, nil, function(response, code, headers, status)
+            if response then
+                if index == 1 then
+                    new_version, text_new_version = response:match('(%d+) | (.+)')
+                    if tonumber(new_version) > script_version then updateScript() update = true end
+                elseif index == 2 then
+                    changelog = u8:decode(response)
+                end
+            else
+                print(url, 'Ошибка при получении последней версии скрипта', code)
+            end
+        end)
+    end
 
     lua_thread.create(function ()
         if not update then
@@ -1048,18 +1083,18 @@ function main()
         if #price ~= 0 and not price:find('%D') then
             autogoc_price = tonumber(price)
             if autogoc_price ~= 0 then
-                sampAddChatMessage('[ Мысли ]: Я автоматически возьму контракт на сумму от {3caa3c}'..setpoint(price)..'$', 0xCCCCCC)
+                scriptMessage('Вы автоматически возьмете контракт на сумму от {3caa3c}'..setpoint(price)..'$')
             else
-                sampAddChatMessage('[ Мысли ]: Я отключил автоматическое взятие контракта', 0xCCCCCC)
+                scriptMessage('Вы отключили автоматическое взятие контракта')
             end
         else
-            sampAddChatMessage('[ Мысли ]: Автоматическое взятие контракта: {FF6347}/autogoc [сумма]', 0xCCCCCC)
+            scriptMessage('Автоматическое взятие контракта: {FF6347}/autogoc [сумма]')
         end
     end)
 
     sampRegisterChatCommand('shud', function(arg)
         mainIni.config.shud = not mainIni.config.shud
-        sampAddChatMessage('[ Hitman Helper ]: Статус отображения стандартного худа GTA San Andreas: {FF6347}'..(mainIni.config.shud and 'отображается' or 'не отображается'), 0xCCCCCC)
+        scriptMessage('Теперь стандартный HUD {FF6347}'..(mainIni.config.shud and 'отображается' or 'не отображается'))
     end)
 
     sampRegisterChatCommand('tempname', function(arg)
@@ -1069,13 +1104,13 @@ function main()
     sampRegisterChatCommand('cfd', function(arg)
         if cfd == nil then
             if arg:find('%D') or #arg == 0 then
-                sampAddChatMessage('[ Мысли ]: Начало преследования: {FF6347}/cfd [id]', 0xCCCCCC)
+                scriptMessage('Начало преследования: {FF6347}/cfd [id]')
             else
                 if sampIsPlayerConnected(tonumber(arg)) then
                     cfd = tonumber(arg)
                     --sampAddChatMessage('[ Мысли ]: Преследование за '..sampGetPlayerNickname(cfd)..' ['..cfd..'] запущено.', 0xCCCCCC)
                 else
-                    sampAddChatMessage('[ Мысли ]: Кажется, этого игрока нет в сети', 0xCCCCCC)
+                    scriptMessage('Этого игрока нет в сети')
                 end
             end
         else
@@ -1090,8 +1125,13 @@ function main()
         if not id:find('%D') and #id ~= 0 then
             sampSendChat('/f Я, Агент №'..acc_id..', готов приступить к выполнению контракта №'..id)
         else
-            sampAddChatMessage('[ Мысли ]: Запрос контракта: {FF6347}/zask [id]', 0xCCCCCC)
+            scriptMessage('Запрос контракта: {FF6347}/zask [id]')
         end
+    end)
+
+    sampUnregisterChatCommand('q')
+    sampRegisterChatCommand('q', function()
+        os.execute('taskkill /IM gta_sa.exe /F')
     end)
     
     while true do
@@ -1129,7 +1169,7 @@ function main()
                 makeScreen()
             end
             if isKeyJustPressed(0x74) then -- F5
-                sampAddChatMessage('[ Hitman Helper ]: Вы вышли из режима тестирования авто-скриншота', 0xCCCCCC)
+                scriptMessage('Вы вышли из режима тестирования авто-скриншота')
                 test_as = false
             end
         end
@@ -1147,17 +1187,16 @@ function updateScript()
     if mainIni.config.autoupdate then
         downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua', thisScript().path, function(id, status)
             if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                sampAddChatMessage('[ Hitman Helper ]: Обновление загружено. Новая версия: '..text_new_version, 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: Начинаю перезапуск скрипта. Ожидай, это не займет много времени.', 0xCCCCCC)
-                sampAddChatMessage('[ Hitman Helper ]: Если скрипт не запустился - скачай его вручную, ссылка оставлена в лог-файле [moonloader/moonloader.log]', 0xCCCCCC)
-                print('Ссылка на актуальную версию: raw.githubusercontent.com/moreveal_hh/main/script/h_helper.lua')
+                scriptMessage('Обновление загружено. Новая версия: '..text_new_version)
+                scriptMessage('Скрипт начал перезапуск. Ожидайте, это не займет много времени')
+                scriptMessage('Если скрипт не запустился - скачай его вручную на портале агентства')
                 thisScript():reload()
             end 
         end)
         update = false
     else
-        sampAddChatMessage('[ Hitman Helper ]: Найдено новое обновление. Версия: '..text_new_version, 0xCCCCCC)
-        sampAddChatMessage('[ Hitman Helper ]: Рекомендуется включить автообновление в скрипте.', 0xCCCCCC)
+        scriptMessage('Найдено новое обновление. Версия: '..text_new_version)
+        scriptMessage('Рекомендуется включить автообновление в конфиге скрипта')
     end
 end
 
@@ -1201,10 +1240,10 @@ function openOtstrelList()
             end
             sampShowDialog(D_INVALID, '{ffffff}Люди из списка отстрела {008000}Online   {ffffff}['..#otstrel_online..']', dialog_text, '*', nil, DIALOG_STYLE_TABLIST_HEADERS)
         else
-            sampAddChatMessage('[ Отстрел ]: К сожалению, этот список пуст :(', 0xCCCCCC)
+            scriptMessage('Список отстрела пуст')
         end
     else
-        sampAddChatMessage('[ Мысли ]: Чекер людей из списка отстрела выключен. Сперва я должен его включить.', 0xCCCCCC)
+        scriptMessage('Чекер людей из списка отстрела выключен. Сперва вы должны его включить.')
     end
 end
 
@@ -1228,8 +1267,13 @@ end
 function loadOtstrelList(type)
     otstrel_list = {}
     if mainIni.config.otstrel_type then
-        local response = requests.get('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
-        for name in string.gmatch(response.text:match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do table.insert(otstrel_list, {name = name}) end
+        httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff', nil, function(response, code, headers, status)
+            if response then
+                for name in string.gmatch(response:match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do table.insert(otstrel_list, {name = name}) end
+            else
+                print(url, 'Ошибка при получении списка отстрела', code)
+            end
+        end)
     else
         if doesFileExist(otstrel_path) then
             local f = io.open(otstrel_path, 'r+')
@@ -1280,7 +1324,7 @@ function loadOtstrelList(type)
                 count_online = count_online + 1
             end
         end
-        sampAddChatMessage('[ Отстрел ]: Список загружен. Игроков в сети: '..count_online..'.', 0xCCCCCC)
+        scriptMessage('Список отстрела загружен. Игроков в сети: '..count_online)
     end
 end
 
@@ -1342,7 +1386,7 @@ function sampev.onPlayerJoin(playerid, color, isnpc, nick)
                         break
                     end 
                 end
-                sampAddChatMessage('[ Отстрел ]: '..nick..' ['..playerid..'] зашел на сервер.', 0xCCCCCC)
+                scriptMessage(nick..' ['..playerid..'] зашел на сервер')
                 table.insert(otstrel_online, {id = playerid, name = nick})
                 break
             end
@@ -1350,8 +1394,7 @@ function sampev.onPlayerJoin(playerid, color, isnpc, nick)
     end
     if mainIni.config.anonymizer then
         for k, v in pairs(anonymizer_names) do
-            local name = v:match('(.+) =')
-            local mask = v:match('= (.+)')
+            local name, mask = v:match('(.+) = (.+)')
             if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampGetPlayerIdByNickname(name) ~= -1 then
                 changeName(name, mask)
             end
@@ -1369,7 +1412,7 @@ function sampev.onPlayerQuit(playerid, reason)
                         break 
                     end
                 end
-                sampAddChatMessage('[ Отстрел ]: '..sampGetPlayerNickname(playerid)..' ['..playerid..'] покинул сервер.', 0xCCCCCC)
+                scriptMessage(sampGetPlayerNickname(playerid)..' ['..playerid..'] покинул сервер')
                 otstrel_online[k] = nil
                 break
             end
@@ -1407,7 +1450,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
         for k, v in pairs(otstrel_list) do
             local id = sampGetPlayerIdByNickname(v.name)
             if playerid == id and mainIni.temp.accept_ct ~= v.name then
-                sampAddChatMessage('[ Отстрел ]: Я убил игрока {800000}'..sampGetPlayerNickname(playerid)..'{cccccc} [ {800000}'..playerid..'{cccccc} ] с оружия '..lastdamage.weapon.name, 0xCCCCCC)
+                scriptMessage('Я убил игрока {800000}'..sampGetPlayerNickname(playerid)..'{FFFFFF} [ {800000}'..playerid..'{FFFFFF} ] с оружия '..lastdamage.weapon.name)
                 table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name..','..(otstrel_squad and 1 or 0))
                 if mainIni.config.autoscreen then makeScreen() end
                 if playerid == cfd then cfd = nil end
@@ -1690,11 +1733,11 @@ if cmd:find('^/id ') then
                 end
             end
             if table.maxn(players) ~= 0 then
-                sampAddChatMessage('По запросу "'..target..'" найдены следующие игроки:', 0xCCCCCC)
+                scriptMessage('По запросу "'..target..'" найдены следующие игроки:')
                 for i = 1, table.maxn(players) do
                     colour = (nick_colours[players[i]['colour']] == nil and 'Неизвестно' or nick_colours[players[i]['colour']])
                     local color = string.format('%06X', bit.band(sampGetPlayerColor(players[i]['id']),  0xFFFFFF))
-                    sampAddChatMessage('[ '..colour..' ]: {'..color..'}'..players[i]['name']:gsub('_', ' ')..'{cccccc} ['..players[i]['id']..'] | Уровень: '..players[i]['level']..' | Пинг: '..players[i]['ping'], 0xCCCCCC)
+                    sampAddChatMessage('[ '..colour..' ]: {'..color..'}'..players[i]['name']..'{cccccc} ['..players[i]['id']..'] | Уровень: '..players[i]['level']..' | Пинг: '..players[i]['ping'], 0xCCCCCC)
                 end
             else
                 if not target:find('%D') then
@@ -1702,13 +1745,13 @@ if cmd:find('^/id ') then
                         target = tonumber(target_lower)
                         colour = (nick_colours[sampGetPlayerColor(target_lower)] == nil and 'Неизвестно' or nick_colours[sampGetPlayerColor(target)])
                         local color = string.format('%06X', bit.band(sampGetPlayerColor(target),  0xFFFFFF))
-                        sampAddChatMessage('По запросу "'..target..'" найден следующий игрок:', 0xCCCCCC)
-                        sampAddChatMessage('[ '..colour..' ]: {'..color..'}'..sampGetPlayerNickname(target):gsub('_', ' ')..'{cccccc} ['..target..'] | Уровень: '..sampGetPlayerScore(target)..' | Пинг: '..sampGetPlayerPing(target), 0xCCCCCC)
+                        scriptMessage('По запросу "'..target..'" найден следующий игрок:')
+                        sampAddChatMessage('[ '..colour..' ]: {'..color..'}'..sampGetPlayerNickname(target)..'{cccccc} ['..target..'] | Уровень: '..sampGetPlayerScore(target)..' | Пинг: '..sampGetPlayerPing(target), 0xCCCCCC)
                     else
-                        sampAddChatMessage('[ Мысли ]: По запросу "'..target..'" ничего не найдено..', 0xCCCCCC)
+                        scriptMessage('По запросу "'..target..'" ничего не найдено')
                     end
                 else
-                    sampAddChatMessage('[ Мысли ]: По запросу "'..target..'" ничего не найдено..', 0xCCCCCC)
+                    scriptMessage('По запросу "'..target..'" ничего не найдено')
                 end
             end
             return false
@@ -1731,12 +1774,14 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
             return false
         end
     end
-    if dialogid == 586 then -- диалог меню агентства
+    if dialogid == 586 then -- диалог менюшки агентства
         if incInvis then
             sampSendDialogResponse(dialogid, 1, 0, -1)
             incInvis = false
             return false
         end
+        text = text:gsub('Отключить Цвет', 'Отключить цвет') text = text:gsub('Список Заказов', 'Список заказов') text = text:gsub('Реклама Агенства', 'Реклама агентства')
+        return {dialogid, style, title, b1, b2, text}
     end
     if openStats and dialogid == 1500 then -- диалог статистики
         for line in text:gmatch('[^\r\n]+') do
@@ -1777,7 +1822,7 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
             end
             count = count + 1
         end
-        if result == nil then return sampAddChatMessage('[ Мысли ]: К сожалению, этот список пуст :(', 0xCCCCCC) end
+        if result == nil then return scriptMessage('Список контрактов пуст') end
         return {dialogid, style, title, b1, b2, result}
     end
     if mainIni.config.automobile then
@@ -1813,8 +1858,7 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
     if mainIni.config.anonymizer then
         local result = text
         for k, v in pairs(anonymizer_names) do
-            local name = v:match('(.+) =')
-            local mask = v:match('= (.+)')
+            local name, mask = v:match('(.+) = (.+)')
             if result:find(name) then
                 result = result:gsub(name, mask)
             end
@@ -1827,12 +1871,10 @@ function sampev.onServerMessage(color, text)
     if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.fakenick = false mainIni.temp.nametag = true end
     if acc_id ~= nil then
         if text:find('{FF0000}%<%< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}%>%>') then
-            sampAddChatMessage(text, 0xFF0000)
             local ct_name = text:match('выполнил контракт на (.-), и получил')
             mainIni.temp.accept_ct = nil
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
             table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name..','..text:match('и получил {00BC12}(%d+%$)'))
-            return false
         end
         if text:find('{8B8B8B}Агент №'..acc_id..' {FF0000}принял контракт на: {8B8B8B}.-%[%d-%] {00AC31}Цена: %d-$ {cccccc}') then
             mainIni.temp.accept_ct = text:match('на: {8B8B8B}(.-)%[%d-%]')
@@ -1844,13 +1886,33 @@ function sampev.onServerMessage(color, text)
             mainIni.temp.accept_ct = nil
         end
     end
+    if mainIni.config.customctstr then
+        if text:find('%*%* %{......%}Агент №(%d+) %{......%}принял контракт на: %{......%}.+%[(%d+)%] %{......%}Цена: (%d+)$ %{......%}%*%*') then
+            local number, id, price = text:match('%*%* %{......%}Агент №(%d+) %{......%}принял контракт на: %{......%}.+%[(%d+)%] %{......%}Цена: (%d+)$ %{......%}%*%*')
+            local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
+            return {color, '{828282}Агент №'..number..' принял контракт на: {'..colour..'}'..sampGetPlayerNickname(id)..'{828282} ['..id..'] | Цена: {00BC12}'..price..'$'}
+        end
+
+        if text:find('%{......%}%*%* %{......%}Агент №(%d+) %{......%}отказывается выполнять контракт на: %{......%}.+%[(%d+)%] %{......%}%*%*') then
+            local number, id = text:match('%{......%}%*%* %{......%}Агент №(%d+) %{......%}отказывается выполнять контракт на: %{......%}.+%[(%d+)%] %{......%}%*%*')
+            local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
+            return {color, '{828282}Агент №'..number..' отказывается выполнять контракт на {'..colour..'}'..sampGetPlayerNickname(id)..'{828282} ['..id..']'} 
+        end
+
+        if text:find('{FF0000}<< {0088ff}Агент № %d- выполнил контракт на .-, и получил {00BC12}%d-$ {FF0000}>>') then
+            local number, nick, price = text:match('{FF0000}<< {0088ff}Агент № (%d-) выполнил контракт на (.-), и получил {00BC12}(%d-)$ {FF0000}>>')
+            local id = sampGetPlayerIdByNickname(nick)
+            local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
+            return {color, '{828282}Агент №'..number..' выполнил контракт на {'..colour..'}'..nick..'{828282} ['..id..'], получив {00BC12}'..price..'$'}
+        end
+    end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
         sampAddChatMessage(text, 0x0088FF)
         if mainIni.config.autoscreen then makeScreen() end
         return false
     end
     if text:find('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]') then
-        makeScreen()
+        if mainIni.config.autoscreen then makeScreen() end
         local ammo, n = text:match('Я положил ящик на склад {......}%[ (.+) | (%d+) ]')
         table.insert(mainIni.stats, '3,'..(ammo:find(',') and ammo:gsub(',','.') or ammo)..','..os.time()..','..n)
     end
@@ -1860,7 +1922,7 @@ function sampev.onServerMessage(color, text)
         if autogoc_price ~= 0 then 
             if tonumber(text:match('сумма {......}(%d-)%$')) >= autogoc_price then
             sampSendChat('/goc '..sampGetPlayerIdByNickname(name))
-            sampAddChatMessage('[ Мысли ]: Я автоматически взял контракт на '..name..' [ отключить /autogoc 0 ]', 0xCCCCCC)
+            scriptMessage('Вы автоматически взяли контракт на '..name..' [ отключить /autogoc 0 ]')
             end
         end
         text = text:gsub(name, name..'['..sampGetPlayerIdByNickname(name)..']')
@@ -1876,33 +1938,11 @@ function sampev.onServerMessage(color, text)
 
     if mainIni.config.anonymizer then
         for k, v in pairs(anonymizer_names) do
-            local name = v:match('(.+) =')
-            local mask = v:match('= (.+)')
+            local name, mask = v:match('(.+) = (.+)')
             if text:find(name) then
                 text = text:gsub(name, mask)
                 return {color, text}
             end
-        end
-    end
-    
-    if mainIni.config.customctstr then
-        if text:find('%*%* %{......%}Агент №(%d+) %{......%}принял контракт на: %{......%}.+%[(%d+)%] %{......%}Цена: (%d+)$ %{......%}%*%*') then
-            local number, id, price = text:match('%*%* %{......%}Агент №(%d+) %{......%}принял контракт на: %{......%}.+%[(%d+)%] %{......%}Цена: (%d+)$ %{......%}%*%*')
-            local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
-            return {color, '{ffff00}Агент №'..number..' принял контракт на: {'..colour..'}'..sampGetPlayerNickname(id):gsub('_', ' ')..' ['..id..']{ffff00} | Цена: {008000}'..price..'$'}
-        end
-
-        if text:find('{FF0000}<< {0088ff}Агент № %d- выполнил контракт на .-, и получил {00BC12}%d-$ {FF0000}>>') then
-            local number, nick, price = text:match('{FF0000}<< {0088ff}Агент № (%d-) выполнил контракт на (.-), и получил {00BC12}(%d-)$ {FF0000}>>')
-            local id = sampGetPlayerIdByNickname(nick)
-            local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
-            return {color, '{ffff00}Агент №'..number..' выполнил контракт на {'..colour..'}'..nick:gsub('_', ' ')..'{ffff00}['..id..'], получив {008000}'..price..'$'}
-        end
-
-        if text:find('%{......%}%*%* %{......%}Агент №(%d+) %{......%}отказывается выполнять контракт на: %{......%}.+%[(%d+)%] %{......%}%*%*') then
-            local number, id = text:match('%{......%}%*%* %{......%}Агент №(%d+) %{......%}отказывается выполнять контракт на: %{......%}.+%[(%d+)%] %{......%}%*%*')
-            local colour = string.format('%06X', bit.band(sampGetPlayerColor(id),  0xFFFFFF))
-            return {color, '{ffff00}Агент №'..number..' отказывается выполнять контракт на {'..colour..'}'..sampGetPlayerNickname(id):gsub('_', ' ')..'{ffff00} ['..id..']'} 
         end
     end
 
@@ -2000,6 +2040,10 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
     end]]
 end
 
+function scriptMessage(msg)
+    return sampAddChatMessage('{FFFFFF}[ {A802F8}ICA Helper {FFFFFF}]: '..msg)
+end
+
 function sampev.onPlayerStreamOut(playerid)
     --[[if mainIni.config.cstream then
         for k, v in pairs(c_ids) do
@@ -2073,7 +2117,7 @@ function statsMenu()
         if type == 2 then type_ots = tonumber(line:match('(%d+)$')) == 1 and true or false end
         points = points + (type == 1 and mainIni.config.points_contracts or (type == 2 and (type_ots and mainIni.config.points_otstrel_squad or mainIni.config.points_otstrel) or mainIni.config.points_ammo))
     end
-    sampShowDialog(D_AGENTSTATS_MAIN, 'Моя работоспособность ['..os.date('%d.%m.%Y')..']', 'Тип\tЗначение\n{cccccc}Суммарное количество набранных баллов:\t{0088FF}'..points..'{FFFFFF}\n{cccccc}Тип работ отстрела:\t'..'{cccccc}'..(otstrel_squad and 'Squad' or 'Solo')..'\nИнформация о выполненных контрактах\nИнформация о работе отстрела\nИнформация о доставленных боеприпасах\nНастройка баллов\n{cccccc}Очистить свою работоспособность', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_AGENTSTATS_MAIN, 'Моя работоспособность ['..os.date('%d.%m.%Y')..']', 'Тип\tЗначение\n{cccccc}Суммарное количество набранных баллов:\t{0088FF}'..points..'{FFFFFF}\n{cccccc}Тип работы отстрела:\t'..'{cccccc}'..(otstrel_squad and 'Squad' or 'Solo')..'\nИнформация о выполненных контрактах\nИнформация о работе отстрела\nИнформация о доставленных боеприпасах\nНастройка баллов\n{cccccc}Очистить свою работоспособность', 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function macrossesFunc()
@@ -2219,8 +2263,7 @@ function dialogFunc()
             elseif listitem == 15 then setting_bind = 'tempname_otstrel'
             elseif listitem == 16 then setting_bind = 'tempname_contracts'
             elseif listitem == 17 then setting_bind = 'tempname_trainings'
-            elseif listitem == 18 then setting_bind = 'setting' end
-            lockPlayerControl(true)   
+            elseif listitem == 18 then setting_bind = 'setting' end 
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_ONE)
@@ -2230,22 +2273,19 @@ function dialogFunc()
                 mainIni.config.anonymizer = not mainIni.config.anonymizer
                 if mainIni.config.anonymizer then
                     for k, v in pairs(anonymizer_names) do
-                        local name = v:match('(.+) =')
-                        local mask = v:match('= (.+)')
+                        local name, mask = v:match('(.+) = (.+)')
                         if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampIsPlayerConnected(sampGetPlayerIdByNickname(name)) then
                             changeName(name, mask)
                         end
                     end
                 else
                     for k, v in pairs(anonymizer_names) do
-                        local name = v:match('(.+) =')
-                        local mask = v:match('= (.+)')
+                        local name, mask = v:match('(.+) = (.+)')
                         if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == mask or sampIsPlayerConnected(sampGetPlayerIdByNickname(mask)) then
                             changeName(mask, name)
                         end
                     end
                 end
-                sampAddChatMessage('[ Мысли ]: Я '..(mainIni.config.anonymizer and 'включил' or 'выключил')..' анонимайзер', 0xCCCCCC)
             end
             if listitem == 1 then
                 sampShowDialog(D_ASETTING_TWO, 'Добавление/редактирование маски', 'Введите ник игрока и маску для него\n{cccccc}Требуемый формат:{cccccc} Nick_Name = Mask', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
@@ -2261,7 +2301,7 @@ function dialogFunc()
         local result, button, listitem, input = sampHasDialogRespond(D_ASETTING_TWO)
         if result and button == 1 then
             if not input:find('.+ = .+') then
-                sampAddChatMessage('[ Мысли ]: Я должен ввести ник и маску в требуемом формате: Nick_Name = Mask', 0xCCCCCC)
+                scriptMessage('Вы должны ввести ник и маску в требуемом формате: Nick_Name = Mask')
                 sampShowDialog(D_ASETTING_TWO, 'Добавление/редактирование маски', 'Введите ник игрока и маску для него\n{ff0000}Требуемый формат:{cccccc} Nick_Name = Mask', 'Ок', 'Отмена', DIALOG_STYLE_INPUT)
             else
                 local retry
@@ -2273,17 +2313,16 @@ function dialogFunc()
                 end
                 if not retry then
                     table.insert(anonymizer_names, input)
-                    sampAddChatMessage('[ Мысли ]: Запись "'..input..'" успешно создана', 0xCCCCCC)
+                    scriptMessage('Запись "'..input..'" успешно создана')
                     if mainIni.config.anonymizer then
-                        local name = input:match('(.+) =')
-                        local mask = input:match('= (.+)')
+                        local name, mask = input:match('(.+) = (.+)')
                         local localid = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
                         if sampGetPlayerNickname(localid) == name or sampGetPlayerIdByNickname(name) ~= -1 then
                             changeName(name, mask)
                         end
                     end
                 else
-                    sampAddChatMessage('[ Мысли ]: Никнеймы и маски не должны повторяться. Сперва я должен удалить старую запись', 0xCCCCCC)
+                    scriptMessage('Никнеймы и маски не должны повторяться. Сперва вы должны удалить старую запись')
                 end
             end
         end
@@ -2299,14 +2338,13 @@ function dialogFunc()
                 end
             end
             if delete ~= nil then
-                sampAddChatMessage('[ Мысли ]: Запись "'..delete..'" успешно удалена', 0xCCCCCC)
-                local name = delete:match('(.+) =')
-                local mask = delete:match('= (.+)')
+                scriptMessage('Запись "'..delete..'" успешно удалена')
+                local name, mask = delete:match('(.+) = (.+)')
                 if sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) == name or sampGetPlayerIdByNickname(mask) ~= -1 then
                     changeName(mask, name)
                 end
             else
-                sampAddChatMessage('[ Мысли ]: Запись по запросу "'..input..'" не обнаружена', 0xCCCCCC)
+                scriptMessage('Запись по запросу "'..input..'" не обнаружена')
             end
         end
 
@@ -2314,26 +2352,6 @@ function dialogFunc()
         if result then
             if button == 1 then
                 sampSendChat('/setcolor '..listitem + 1)
-            end
-        end
-
-        local result, button, listitem, input = sampHasDialogRespond(D_CSETTING)
-        if result then
-            if button == 1 then
-                if listitem == 0 then mainIni.chat.misli = not mainIni.chat.misli end
-                if listitem == 1 then mainIni.chat.p_adm = not mainIni.chat.p_adm end
-                if listitem == 2 then mainIni.chat.frac = not mainIni.chat.frac end
-                if listitem == 3 then mainIni.chat.fam = not mainIni.chat.fam end
-                if listitem == 4 then mainIni.chat.ads = not mainIni.chat.ads end
-                if listitem == 5 then mainIni.chat.invites = not mainIni.chat.invites end
-                if listitem == 6 then mainIni.chat.gos_ads = not mainIni.chat.gos_ads end
-                if listitem == 7 then mainIni.chat.a_adm = not mainIni.chat.a_adm end
-                if listitem == 8 then mainIni.chat.news_cnn = not mainIni.chat.news_cnn end
-                if listitem == 9 then mainIni.chat.news_sekta = not mainIni.chat.news_sekta end
-                if listitem == 10 then mainIni.chat.hit_ads = not mainIni.chat.hit_ads end
-                if listitem == 11 then mainIni.chat.propose = not mainIni.chat.propose end
-
-                chatSettings()
             end
         end
 
@@ -2359,7 +2377,7 @@ function dialogFunc()
                 end
             end
             weapons_list[weapon_id] = input
-            sampAddChatMessage('[ Мысли ]: Название оружия успешно изменено на "'..input..'"', 0xCCCCCC)
+            scriptMessage('Название оружия успешно изменено на "'..input..'"')
         end
 
         local result, button, listitem, input = sampHasDialogRespond(D_TNSETTING_ONE)
@@ -2450,7 +2468,7 @@ function dialogFunc()
         if result and button == 1 then
             if sampGetDialogText():find('При очистке вашей работоспособности, восстановить её уже не получится') then
                 mainIni.stats = {}
-                sampAddChatMessage('[ Hitman Helper ]: Ваша работоспособность была очищена.', 0xCCCCCC)
+                scriptMessage('Ваша работоспособность была очищена.')
             else
                 if listitem == 1 then -- Смена типа работы отстрела (Solo/Squad)
                     otstrel_squad = not otstrel_squad
@@ -2931,7 +2949,13 @@ end
 function onWindowMessage(msg, wparam, lparam)
     if msg == 0x100 or msg == 0x104 then
     	if bit.band(lparam, 0x40000000) == 0 then
+            if ScriptMainMenu[0] and not sampIsDialogActive() and wparam == 27 then
+                consumeWindowMessage(true, false)
+                ScriptMainMenu[0] = false
+                lockPlayerControl(false)
+            end
 			if setting_bind ~= nil then
+                consumeWindowMessage(true, false)
 				if wparam == 8 or wparam == 13 then
 					if wparam == 8 then
 						nkeys_bind = {}
@@ -2956,17 +2980,6 @@ function onWindowMessage(msg, wparam, lparam)
 			end
 		end
 	end
-	if msg == 0x100 or msg == 0x101 then
-		if wparam == 0x1B and not isPauseMenuActive() then
-			if ScriptMainMenu[0] and not sampIsDialogActive() then
-				consumeWindowMessage(true, false)
-				if msg == 0x101 then
-					ScriptMainMenu[0] = false
-					lockPlayerControl(ScriptMainMenu[0])
-                end
-            end
-        end
-    end
 end
 
 function sampev.onShowPlayerNameTag(playerid, state)
