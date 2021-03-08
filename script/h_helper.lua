@@ -215,7 +215,7 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
 
-local script_version = 48 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 49 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.9' -- версия для вывода в окне настроек, не изменять
 
@@ -962,10 +962,12 @@ function main()
     cb_metka = new.bool(mainIni.config.metka)
     cb_autofind = new.bool(mainIni.config.autofind)
 
-    if not doesFileExist(getFolderPath(0x14)..'/10089.ttf') or not doesFileExist(getFolderPath(0x14)..'/BAHNSCHRIFT.ttf') then
+    if not doesFileExist(getFolderPath(0x14)..'/10089.ttf') or not doesFileExist(getFolderPath(0x14)..'/BAHNSCHRIFT.ttf') or not doesFileExist(getFolderPath(0x14)..'/12002.ttf') then
         downloadUrlToFile('https://github.com/moreveal/moreveal_hh/blob/main/fonts/10089.TTF?raw=true', getFolderPath(0x14)..'/10089.ttf', function(id, status) end)
         wait(1000)
         downloadUrlToFile('https://github.com/moreveal/moreveal_hh/blob/main/fonts/BAHNSCHRIFT.TTF?raw=true', getFolderPath(0x14)..'/BAHNSCHRIFT.ttf', function(id, status) end)
+        wait(1000)
+        downloadUrlToFile('https://github.com/moreveal/moreveal_hh/blob/main/fonts/12002.ttf?raw=true', getFolderPath(0x14)..'/12002.ttf', function(id, status) end)
         wait(1000)
     end
     if not doesFileExist(getWorkingDirectory()..'/lib/screenshot.lua') or not doesFileExist(getGameDirectory()..'/Screenshot.asi') then
@@ -1276,13 +1278,10 @@ end
 function loadOtstrelList(type)
     otstrel_list = {}
     if mainIni.config.otstrel_type then
-        httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff', nil, function(response, code, headers, status)
-            if response then
-                for name in string.gmatch(response:match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do table.insert(otstrel_list, {name = name}) end
-            else
-                print(url, 'Ошибка при получении списка отстрела', code)
-            end
-        end)
+        local response, code, headers, status = httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
+        for nick in string.gmatch(u8:decode(response):match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do 
+            table.insert(otstrel_list, {name = nick})
+        end
     else
         if doesFileExist(otstrel_path) then
             local f = io.open(otstrel_path, 'r+')
@@ -1290,32 +1289,6 @@ function loadOtstrelList(type)
             f:close()
         end
     end
-
-    --[[local f = io.open(otstrel_path, 'r+')
-    if f == nil then
-        f = io.open(otstrel_path, 'w') 
-    else
-        for line in f:lines() do
-            local fdate, ldate, name
-            if not line:find('%> (.-) %- .+') then
-                fdate, ldate, name = line:match('%[(.-)%-(.-)%] (.-) %-')
-            else
-                fdate, ldate, name = line:match('%[(.-)%-(.-)%] .+%> (.-) %-')
-            end
-            --local fday, fmonth, fyear = fdate:match('(%d+)%.(%d+)%.(%d+)')
-            local lday, lmonth, lyear = ldate:match('(%d+)%.(%d+)%.(%d+)')
-            --fdate = os.time({year = fyear, month = fmonth, day = fday})
-            ldate = os.time({year = lyear, month = lmonth, day = lday})
-            if ldate >= os.time() then
-                table.insert(otstrel_list, {name = name})
-                sampAddChatMessage(name, 0xCCCCCC)
-            end
-        end
-    end
-    f:close()]]
-
-    --[[local response = requests.get('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/otstrel_list')
-    for name in response.text:gmatch('[^\r\n]+') do table.insert(otstrel_list, {name = name}) end]]
 
     if type == 1 and mainIni.config.otstrel then
         local count, count_online = 0, 0
