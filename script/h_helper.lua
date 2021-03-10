@@ -1283,15 +1283,15 @@ end
 function loadOtstrelList(type)
     otstrel_list = {}
     if mainIni.config.otstrel_type then
-        httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff', nil, function(response, code, headers, status)
-            for nick in string.gmatch(u8:decode(response):match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do 
-                table.insert(otstrel_list, {name = nick})
+        local response, code, headers, status = httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
+        if response then
+            for name in string.gmatch(u8:decode(response):match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do 
+                table.insert(otstrel_list, {name = name}) 
             end
-        end)
-        if #otstrel_list == 0 then
+        else
             mainIni.config.otstrel_type = false
             cb_otsauto[0], cb_otslocal[0] = false, true
-            scriptMessage('Невозможно загрузить список отстрела {CCCCCC}[ Связь с порталом не установлена ]')
+            scriptMessage('Невозможно загрузить список отстрела {CCCCCC}[ Связь с порталом не установлена, превышено время ожидания ]')
             scriptMessage('Режим получения списка будет изменен, а скрипт перезапущен.')
             thisScript():reload()
         end
@@ -1300,6 +1300,10 @@ function loadOtstrelList(type)
             local f = io.open(otstrel_path, 'r+')
             for name in f:lines() do table.insert(otstrel_list, {name = name}) end
             f:close()
+        else
+            io.open(otstrel_path, 'w+'):close()
+            scriptMessage('Файл создан {CCCCCC}[ ../config/Hitman Helper/otstrel.txt ]')
+            scriptMessage('Заполните его, размещая каждый последующий никнейм на новой строке')
         end
     end
 
