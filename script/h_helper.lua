@@ -590,6 +590,11 @@ local newFrame = imgui.OnFrame(
 										if mimgui.CustomCheckbox(u8'Загружать список отстрела\nиз локального файла', cb_otslocal) then 
                                             mainIni.config.otstrel_type = not cb_otslocal[0]
                                             cb_otsauto[0] = mainIni.config.otstrel_type
+                                            if not doesFileExist(otstrel_path) then
+                                                io.open(otstrel_path, 'w+'):close()
+                                                scriptMessage('Файл создан {CCCCCC}[ ../config/Hitman Helper/otstrel.txt ]')
+                                                scriptMessage('Заполните его, размещая каждый последующий никнейм на новой строке')
+                                            end
                                         end
 									imgui.PopFont()
 								imgui.EndChild()
