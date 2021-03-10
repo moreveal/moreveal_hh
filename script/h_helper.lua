@@ -215,7 +215,7 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог дл€ просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог дл€ просмотра работоспособности агента (Ќастройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог дл€ просмотра работоспособности агента (»нформаци€)
 
-local script_version = 49 --[[ »спользуетс€ дл€ автообновлени€, во избежание проблем 
+local script_version = 50 --[[ »спользуетс€ дл€ автообновлени€, во избежание проблем 
 с получением новых обновлений, рекомендуетс€ не измен€ть. ¬ случае их по€влени€ измените значение на "1" ]]
 local text_version = '1.9' -- верси€ дл€ вывода в окне настроек, не измен€ть
 
@@ -1278,9 +1278,17 @@ end
 function loadOtstrelList(type)
     otstrel_list = {}
     if mainIni.config.otstrel_type then
-        local response, code, headers, status = httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
-        for nick in string.gmatch(u8:decode(response):match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do 
-            table.insert(otstrel_list, {name = nick})
+        httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff', nil, function(response, code, headers, status)
+            for nick in string.gmatch(u8:decode(response):match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do 
+                table.insert(otstrel_list, {name = nick})
+            end
+        end)
+        if #otstrel_list == 0 then
+            mainIni.config.otstrel_type = false
+            cb_otsauto[0], cb_otslocal[0] = false, true
+            scriptMessage('Ќевозможно загрузить список отстрела {CCCCCC}[ —в€зь с порталом не установлена ]')
+            scriptMessage('–ежим получени€ списка будет изменен, а скрипт перезапущен.')
+            thisScript():reload()
         end
     else
         if doesFileExist(otstrel_path) then
@@ -1854,7 +1862,7 @@ function sampev.onServerMessage(color, text)
     if acc_id ~= nil then
         if text:find('{FF0000}%<%< {0088ff}јгент є '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}%>%>') then
             local ct_name = text:match('выполнил контракт на (.-), и получил')
-            mainIni.temp.accept_ct = nil
+            lua_thread.create(function () wait(500) mainIni.temp.accept_ct = nil end)
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
             table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name..','..text:match('и получил {00BC12}(%d+%$)'))
         end
@@ -2023,7 +2031,7 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
 end
 
 function scriptMessage(msg)
-    return sampAddChatMessage('{FFFFFF}[ {A802F8}ICA Helper {FFFFFF}]: '..msg)
+    return sampAddChatMessage('{FFFFFF}[ {A802F8}ICA Helper {FFFFFF}]: '..msg, -1)
 end
 
 function sampev.onPlayerStreamOut(playerid)
