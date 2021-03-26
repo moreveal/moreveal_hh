@@ -215,7 +215,7 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
 
-local script_version = 50 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 51 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.9' -- версия для вывода в окне настроек, не изменять
 
@@ -570,7 +570,7 @@ local newFrame = imgui.OnFrame(
 								imgui.PopFont()
 								imgui.SetCursorPosX(10)
 								imgui.CreatePaddingY(1)
-								imgui.BeginChild("metods_section", imgui.ImVec2(200, 165), true)
+								imgui.BeginChild("methods_section", imgui.ImVec2(200, 165), true)
 									imgui.PushFont(MainContentText)
 										if mimgui.CustomCheckbox(u8'Выполнять авто-скриншот\nс помощью встроенного модуля', cb_stypemodule) then 
                                             mainIni.config.screen_type = cb_stypemodule[0]
@@ -585,6 +585,7 @@ local newFrame = imgui.OnFrame(
 										if mimgui.CustomCheckbox(u8'Загружать список отстрела\nиз портала ICA', cb_otsauto) then 
                                             mainIni.config.otstrel_type = cb_otsauto[0]
                                             cb_otslocal[0] = not mainIni.config.otstrel_type
+                                            loadOtstrelList(1)
                                         end
 										--------------------- imgui.CreatePaddingY(5) ---------------------
 										if mimgui.CustomCheckbox(u8'Загружать список отстрела\nиз локального файла', cb_otslocal) then 
@@ -595,6 +596,7 @@ local newFrame = imgui.OnFrame(
                                                 scriptMessage('Файл создан {CCCCCC}[ ../config/Hitman Helper/otstrel.txt ]')
                                                 scriptMessage('Заполните его, размещая каждый последующий никнейм на новой строке')
                                             end
+                                            loadOtstrelList(1)
                                         end
 									imgui.PopFont()
 								imgui.EndChild()
@@ -652,8 +654,8 @@ local newFrame = imgui.OnFrame(
 										imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(0.0, 0.0))
 											imgui.SetCursorPosX((imgui.GetWindowWidth() - 130)/2)
 											if mimgui.CustomButton("bttn_hudpos", "Изменить положение", imgui.ImVec2(130, 30)) then 
-                                                scriptMessage('Перемещайте курсор для установки нового положения кастомного худа')
-                                                scriptMessage('ЛКМ - установить новое положение | ПКМ - установить положение по умолчанию')
+                                                scriptMessage('Перемещайте курсор для установки нового положения кастомного HUD')
+                                                scriptMessage('ЛКМ - установить новое положение | ПКМ - вернуть предыдущее положение')
                                                 hud_move = true
                                                 ScriptMainMenu[0] = false
                                                 lockPlayerControl(false)
@@ -1172,11 +1174,11 @@ function main()
                 inicfg.save(mainIni, config_path)
             end
             if isKeyJustPressed(0x02) then
-                mainIni.hud.xpos = sw - 359
-                mainIni.hud.ypos = sh - 48
                 showCursor(false, false)
                 hud_move = false
-                inicfg.save(mainIni, config_path)
+                local restore = {}
+                inicfg.load(restore, config_path)
+                mainIni.hud = restore.hud
             end
         end
 
@@ -1298,7 +1300,7 @@ function loadOtstrelList(type)
     else
         if doesFileExist(otstrel_path) then
             local f = io.open(otstrel_path, 'r+')
-            for name in f:lines() do table.insert(otstrel_list, {name = name}) end
+            for name in f:lines() do table.insert(otstrel_list, {name = name:match('(%w+_%w+)')}) end
             f:close()
         else
             io.open(otstrel_path, 'w+'):close()
@@ -1443,7 +1445,7 @@ end
 
 function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     lastdamage.playerid, lastdamage.damage, lastdamage.weapon, lastdamage.bodypart = playerid, damage, {id = weapon, name = weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)]}, bodypart
-    if sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9) and getCharArmour(select(2, sampGetCharHandleBySampPlayerId(playerid))) <= 0 then
+    if (sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9)) and getCharArmour(select(2, sampGetCharHandleBySampPlayerId(playerid))) <= 0 then
         if playerid == cfd then cfd = nil end
 
         for k, v in pairs(otstrel_list) do
@@ -2618,7 +2620,7 @@ function scriptBody()
 
             if cfd ~= nil then
                 if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(cfd)) then
-                    renderFontDrawText(font, '{ff0000}SEARCH: {ffffff}'..sampGetPlayerNickname(cfd):gsub('_', ' ')..' [ '..cfd..' ]', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
+                    renderFontDrawText(font, 'SEARCH: '..string.nupper(sampGetPlayerNickname(cfd):gsub('_', ' '))..' ['..cfd..']', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xAAFFFFFF, 1)
                     
                     if mainIni.config.metka then
                         local result, handle = sampGetCharHandleBySampPlayerId(cfd)
@@ -2660,13 +2662,13 @@ function scriptBody()
                         local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
                         local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
                         if result then
-                            renderFontDrawText(font, sampGetPlayerNickname(id)..' {FFFFFF}[ {800000}'..id..' {FFFFFF}] | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xFF800000)
+                            renderFontDrawText(font, sampGetPlayerNickname(id)..' [ '..id..' ] | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xAAFFFFFF)
                             found = true
                         end
                     end
                 end
                 checkstream_pos = checkstream_pos - 15
-                if found then renderFontDrawText(font, 'Отстрел:', mainIni.hud.xpos - 1, checkstream_pos, 0xFFFFFFFF) end
+                if found then renderFontDrawText(font, 'Отстрел:', mainIni.hud.xpos - 1, checkstream_pos, 0xAAFFFFFF) end
             end
 
             if mainIni.config.cstream then
@@ -2689,17 +2691,17 @@ function scriptBody()
                         local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
                         local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
                         if result then
-                            renderFontDrawText(font, sampGetPlayerNickname(id)..' {FFFFFF}[ {800000}'..id..' {FFFFFF}] ('..sum..'$) | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xFF800000)
+                            renderFontDrawText(font, sampGetPlayerNickname(id)..' [ {800000}'..id..' ] ('..sum..'$) | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xAAFFFFFF)
                             found = true
                         end
                     end
                 end
                 checkstream_pos = checkstream_pos - 15
-                if found then renderFontDrawText(font, 'Контракты:', mainIni.hud.xpos - 1, checkstream_pos, 0xFFFFFFFF) end
+                if found then renderFontDrawText(font, 'Контракты:', mainIni.hud.xpos - 1, checkstream_pos, 0xAAFFFFFF) end
             end
         
-            if getInvisibility(id) then renderFontDrawText(font, 'INVISIBILITY', mainIni.hud.xpos - 1, (cfd ~= nil and mainIni.hud.ypos - 50 or mainIni.hud.ypos - 27), 0xFF0088FF) end
-            renderFontDrawText(font, 'NAMETAG ['..(mainIni.temp.fakenick and '{8a2be2}FAKE{FFFFFF} / '..(mainIni.temp.nametag and '{008000}ON' or '{ff0000}OFF') or mainIni.temp.nametag and '{008000} ON ' or '{ff0000} OFF ')..'{ffffff}]', (cfd ~= nil and mainIni.hud.xpos + 225 or getInvisibility(id) and mainIni.hud.xpos + 114.2 or mainIni.hud.xpos - 1), mainIni.hud.ypos - 27, 0xFFFFFFFF, 1)
+            if getInvisibility(id) then renderFontDrawText(font, 'INVISIBILITY', mainIni.hud.xpos - 1, (cfd ~= nil and mainIni.hud.ypos - 50 or mainIni.hud.ypos - 27), 0xAAFFFFFF) end
+            renderFontDrawText(font, 'NAMETAG ['..(mainIni.temp.fakenick and 'FAKE / '..(mainIni.temp.nametag and 'ON' or 'OFF') or mainIni.temp.nametag and 'ON' or 'OFF')..']', (cfd ~= nil and (mainIni.temp.fakenick and mainIni.hud.xpos + 235 or mainIni.hud.xpos + 270) or getInvisibility(id) and mainIni.hud.xpos + 100 or mainIni.hud.xpos), mainIni.hud.ypos - 27, 0xAAFFFFFF, 1)
         end
 
         if mainIni.config.cstream then
