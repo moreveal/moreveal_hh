@@ -219,8 +219,6 @@ local script_version = 51 --[[ Используется для автообновления, во избежание про
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.9' -- версия для вывода в окне настроек, не изменять
 
-local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
-
 local time_find = os.clock() -- таймер /find
 local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
 
@@ -1029,7 +1027,7 @@ function main()
     end
 
     local list = {
-        update_url,
+        'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua',
         'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/last_news.txt'
     }
 
@@ -1037,7 +1035,8 @@ function main()
         httpRequest(url, nil, function(response, code, headers, status)
             if response then
                 if index == 1 then
-                    new_version, text_new_version = response:match('(%d+) | (.+)')
+                    new_version = response:match('local script_version = (%d+)')
+                    text_new_version = response:match("local text_version = '(.-)'")
                     if tonumber(new_version) > script_version then updateScript() update = true end
                 elseif index == 2 then
                     changelog = u8:decode(response)
