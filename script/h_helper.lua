@@ -219,6 +219,8 @@ local script_version = 51 --[[ Используется для автообновления, во избежание про
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.9' -- версия для вывода в окне настроек, не изменять
 
+local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
+
 local time_find = os.clock() -- таймер /find
 local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
 
@@ -1027,7 +1029,7 @@ function main()
     end
 
     local list = {
-        'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua',
+        update_url,
         'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/last_news.txt'
     }
 
@@ -1035,8 +1037,7 @@ function main()
         httpRequest(url, nil, function(response, code, headers, status)
             if response then
                 if index == 1 then
-                    new_version = response:match('local script_version = (%d+)')
-                    text_new_version = response:match("local text_version = '(.-)'")
+                    new_version, text_new_version = response:match('(%d+) | (.+)')
                     if tonumber(new_version) > script_version then updateScript() update = true end
                 elseif index == 2 then
                     changelog = u8:decode(response)
@@ -1205,8 +1206,8 @@ function updateScript()
         downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua', thisScript().path, function(id, status)
             if status == dlstatus.STATUS_ENDDOWNLOADDATA then
                 scriptMessage('Обновление загружено. Новая версия: '..text_new_version)
-                scriptMessage('Скрипт начал перезапуск. Ожидайте, это не займет много времени')
-                scriptMessage('Если скрипт не запустился - скачай его вручную на портале агентства')
+                scriptMessage('Скрипт перезапустится. Ожидайте, это не займет много времени')
+                scriptMessage('Если скрипт не запустился - скачайте его вручную на портале агентства')
                 thisScript():reload()
             end 
         end)
