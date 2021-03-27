@@ -215,7 +215,7 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
 
-local script_version = 51 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 52 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '1.9' -- версия для вывода в окне настроек, не изменять
 
@@ -223,6 +223,7 @@ local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/
 
 local time_find = os.clock() -- таймер /find
 local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
+local dialog_cooldown = 0 -- задержка для избежания проблем с некликабельными диалоговыми окнами
 
 font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
 font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- подключение шрифта для остального текста
@@ -1287,7 +1288,7 @@ function loadOtstrelList(type)
     if mainIni.config.otstrel_type then
         local response, code, headers, status = httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
         if response then
-            for name in string.gmatch(u8:decode(response):match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do 
+            for name in string.gmatch(u8:decode(response):match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do
                 table.insert(otstrel_list, {name = name}) 
             end
         else
@@ -1866,6 +1867,16 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
         end
         return {dialogid, style, title, b1, b2, result}
     end
+end
+
+function sampev.onSendDialogResponse(dialogid, button, listitem, input)
+    dialog_cooldown = 2
+    lua_thread.create(function()
+        while dialog_cooldown > 0 do
+            wait(1000)
+            dialog_cooldown = dialog_cooldown - 1
+        end
+    end)
 end
 
 function sampev.onServerMessage(color, text)
@@ -2620,7 +2631,8 @@ function scriptBody()
 
             if cfd ~= nil then
                 if not isPauseMenuActive() and sampIsPlayerConnected(tonumber(cfd)) then
-                    renderFontDrawText(font, 'SEARCH: '..string.nupper(sampGetPlayerNickname(cfd):gsub('_', ' '))..' ['..cfd..']', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xAAFFFFFF, 1)
+                    local cfd_name = sampGetPlayerNickname(cfd)
+                    renderFontDrawText(font, 'SEARCH: '..string.nupper(cfd_name:find('%w+_%w+') and cfd_name:gsub('_', ' ', 1) or cfd_name)..' ['..cfd..']', mainIni.hud.xpos - 1, mainIni.hud.ypos - 27, 0xAAFFFFFF, 1)
                     
                     if mainIni.config.metka then
                         local result, handle = sampGetCharHandleBySampPlayerId(cfd)
@@ -2691,7 +2703,7 @@ function scriptBody()
                         local o_xpos, o_ypos, o_zpos = getCharCoordinates(handle)
                         local result, distance = pcall(getDistanceBetweenCoords3d, p_xpos, p_ypos, p_zpos, o_xpos, o_ypos, o_zpos)
                         if result then
-                            renderFontDrawText(font, sampGetPlayerNickname(id)..' [ {800000}'..id..' ] ('..sum..'$) | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xAAFFFFFF)
+                            renderFontDrawText(font, sampGetPlayerNickname(id)..' [ '..id..' ] ('..sum..'$) | '..select(1, math.modf(distance))..'m', mainIni.hud.xpos - 1, checkstream_pos, 0xAAFFFFFF)
                             found = true
                         end
                     end
@@ -2701,12 +2713,12 @@ function scriptBody()
             end
         
             if getInvisibility(id) then renderFontDrawText(font, 'INVISIBILITY', mainIni.hud.xpos - 1, (cfd ~= nil and mainIni.hud.ypos - 50 or mainIni.hud.ypos - 27), 0xAAFFFFFF) end
-            renderFontDrawText(font, 'NAMETAG ['..(mainIni.temp.fakenick and 'FAKE / '..(mainIni.temp.nametag and 'ON' or 'OFF') or mainIni.temp.nametag and 'ON' or 'OFF')..']', (cfd ~= nil and (mainIni.temp.fakenick and mainIni.hud.xpos + 235 or mainIni.hud.xpos + 270) or getInvisibility(id) and mainIni.hud.xpos + 100 or mainIni.hud.xpos), mainIni.hud.ypos - 27, 0xAAFFFFFF, 1)
+            renderFontDrawText(font, 'NAMETAG ['..(mainIni.temp.fakenick and 'FAKE / '..(mainIni.temp.nametag and 'ON' or 'OFF') or mainIni.temp.nametag and 'ON' or 'OFF')..']', (cfd ~= nil and (mainIni.temp.fakenick and mainIni.hud.xpos + 230 or mainIni.hud.xpos + 270) or getInvisibility(id) and mainIni.hud.xpos + 100 or mainIni.hud.xpos), mainIni.hud.ypos - 27, 0xAAFFFFFF, 1)
         end
 
         if mainIni.config.cstream then
             lua_thread.create(function ()
-                if (os.clock() - time_stream >= 10) and not sampIsDialogActive() then
+                if (os.clock() - time_stream >= 10) and not sampIsDialogActive() and dialog_cooldown <= 0 then
                     c_ids = {}
                     sampSendChat('/contractas')
                     openContractas = true
