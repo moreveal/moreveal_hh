@@ -987,7 +987,7 @@ function main()
 
     local ip = select(1, sampGetCurrentServerAddress())..':'..select(2, sampGetCurrentServerAddress())
     if ip ~= '176.32.37.62:7777' then
-        mainIni.temp.nametag = not getStructElement(readMemory(sampGetPlayerStructPtr(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))), 4, true), 179, 2, false) == 0
+        mainIni.temp.nametag = true
         mainIni.temp.fakenick = false
         if mainIni.config.onlypp then
             thisScript():unload()
@@ -1886,7 +1886,7 @@ function sampev.onSendDialogResponse(dialogid, button, listitem, input)
 end
 
 function sampev.onServerMessage(color, text)
-    if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.fakenick = false end
+    if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.nametag = true mainIni.temp.fakenick = false end
     if acc_id ~= nil then
         if text:find('{FF0000}%<%< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}%>%>') then
             local ct_name = text:match('выполнил контракт на (.-), и получил')
