@@ -985,10 +985,11 @@ function main()
     end
     screenshot = require 'screenshot'
 
+    local playerid = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
+    mainIni.temp.nametag = not getStructElement(readMemory(sampGetPlayerStructPtr(playerid), 4, true), 179, 2, false) == 0
     local ip = select(1, sampGetCurrentServerAddress())..':'..select(2, sampGetCurrentServerAddress())
     if ip ~= '176.32.37.62:7777' then
-        mainIni.temp.fakenick = false 
-        mainIni.temp.nametag = true
+        mainIni.temp.fakenick = false
         if mainIni.config.onlypp then
             thisScript():unload()
         end
@@ -1225,9 +1226,11 @@ function openOtstrelList()
         for k, v in pairs(otstrel_list) do
             local id = sampGetPlayerIdByNickname(v.name)
             if id ~= -1 then
-                table.insert(otstrel_online, {id = id, name = sampGetPlayerNickname(id)})
+                table.insert(otstrel_online, id)
             end
         end
+        table.sort(otstrel_online)
+        for k,v in pairs(otstrel_online) do otstrel_online[k] = {id = v, name = sampGetPlayerNickname(v)} end
 
         local dialog_text
         if #otstrel_online ~= 0 then
@@ -1376,6 +1379,7 @@ function sampev.onDisplayGameText(style, time, text)
             return false
         end
     end
+    --sampAddChatMessage('style: '..style..' | time: '..time..' | text: '..text, -1)
 end
 
 function sampev.onPlayerJoin(playerid, color, isnpc, nick)
@@ -1448,11 +1452,14 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     lastdamage.playerid, lastdamage.damage, lastdamage.weapon, lastdamage.bodypart = playerid, damage, {id = weapon, name = weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)]}, bodypart
     if (sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9)) and getCharArmour(select(2, sampGetCharHandleBySampPlayerId(playerid))) <= 0 then
         if playerid == cfd then cfd = nil end
-
         for k, v in pairs(otstrel_list) do
             local id = sampGetPlayerIdByNickname(v.name)
             if playerid == id and mainIni.temp.accept_ct ~= v.name then
-                scriptMessage('Я убил игрока {800000}'..sampGetPlayerNickname(playerid)..'{FFFFFF} [ {800000}'..playerid..'{FFFFFF} ] с оружия '..lastdamage.weapon.name)
+                local p_x, p_y, p_z = getCharCoordinates(PLAYER_PED)
+                local t_x, t_y, t_z = getCharCoordinates(select(2, sampGetCharHandleBySampPlayerId(playerid)))
+                --emul_rpc('onDisplayGameText', {4, 6000, '~g~Oћe®© Y—њ¦'})
+                if bodypart == 9 then emul_rpc('onDisplayGameText', {1, 4000, '~g~HEADSHOT'}) end
+                scriptMessage('Я убил игрока {800000}'..sampGetPlayerNickname(playerid)..'{FFFFFF} [ {800000}'..playerid..'{FFFFFF} ] с расстояния '.. math.ceil(getDistanceBetweenCoords3d(p_x, p_y, p_z, t_x, t_y, t_z))..'м')
                 table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name..','..(otstrel_squad and 1 or 0))
                 if mainIni.config.autoscreen then makeScreen() end
                 if playerid == cfd then cfd = nil end
@@ -1880,7 +1887,7 @@ function sampev.onSendDialogResponse(dialogid, button, listitem, input)
 end
 
 function sampev.onServerMessage(color, text)
-    if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.fakenick = false mainIni.temp.nametag = true end
+    if text:find('{0088ff}Привет, {FFFFFF}.-! Сегодня {ffcc66}') then mainIni.temp.fakenick = false end
     if acc_id ~= nil then
         if text:find('{FF0000}%<%< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}%>%>') then
             local ct_name = text:match('выполнил контракт на (.-), и получил')
@@ -1920,6 +1927,7 @@ function sampev.onServerMessage(color, text)
     end
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
         sampAddChatMessage(text, 0x0088FF)
+        if lastdamage.bodypart == 9 then emul_rpc('onDisplayGameText', {1, 4000, '~g~HEADSHOT'}) end
         if mainIni.config.autoscreen then makeScreen() end
         return false
     end
@@ -1941,12 +1949,9 @@ function sampev.onServerMessage(color, text)
         return {color, text}
     end
     --[[if text:find('%[ Мысли %]: Я закрыла* своё лицо {FF6347}%[ Никнейм отключён %]') or text:find('%[ Мысли %]: Я открыла* своё лицо {99ff66}%[ Никнейм включён %]') then end]]
-    if text == '[ Мысли ]: Я не могу видеть список потенциальных жертв' then
-        return false
-    end
-    if text == '[ Мысли ]: Я не могу искать человека' then
-        return false
-    end
+    if text == '[ Мысли ]: Я не могу видеть список потенциальных жертв' then return false end
+    if text == '[ Мысли ]: Я не могу искать человека' then return false end
+    if text == '[ Мысли ]: На его нет контракта' then local result = text:gsub('его', 'него') return {color, result} end
 
     if mainIni.config.anonymizer then
         for k, v in pairs(anonymizer_names) do
@@ -1983,13 +1988,13 @@ function sampev.onServerMessage(color, text)
         end
     end
     if not mainIni.chat.ads then
-        if text:find('%* %[.*Реклама%]:%{......%}.+, %{......%}Контакт: [^Неизвестный]') or text:find('%* Обработал:{......} .+ %*') then
+        if text:find('%* %[.*Реклама%]:{......}.+, {......}Контакт: [^Неизвестный]') or text:find('%* Обработал:{......} .+ %*') then
             print(text)
             return false
         end
     end
     if not mainIni.chat.invites then
-        if (color == -86 or color == -858993494) and (text:find("%*%*%p+%{") or text:find("%[ %{00cc00%}Открыт %{ffffff%}| %{00cc00%}/invites %{ffffff%}%]") or text:find("Открыт призыв в NGSA: %[ %{333300%}Открыт %{ffffff%}|")) then
+        if (color == -86 or color == -858993494) and (text:find("%*%*%p+{") or text:find("%[ {00cc00}Открыт {ffffff}| {00cc00}/invites {ffffff}%]") or text:find("Открыт призыв в NGSA: %[ {333300}Открыт {ffffff}|")) then
             print(text)
             return false
         end
@@ -2001,31 +2006,31 @@ function sampev.onServerMessage(color, text)
         end
     end
     if not mainIni.chat.a_adm then
-        if (text:find("%{ff9000%}%* %[ADM%]%a+_%a+%[%d+%]:") or text:find("%{0088ff%}%(%( %a+_%a+%[%d+%]%: %{FFFFFF%}")) then
+        if (text:find("%{ff9000%}%* %[ADM%]%a+_%a+%[%d+%]:") or text:find("{0088ff}%(%( %a+_%a+%[%d+%]%: {FFFFFF}")) then
             print(text)
             return false
         end
     end
     if not mainIni.chat.news_cnn then
-        if (color == -5963606 or color == -1697828182) and (text:find("%{FFFFFF%}%* CNN %* %a+_%a+:") or text:find("%[Прямой Эфир%]")) then
+        if (color == -5963606 or color == -1697828182) and (text:find("{FFFFFF}%* CNN %* %a+_%a+:") or text:find("%[Прямой Эфир%]")) then
             print(text)
             return false
         end
     end
     if not mainIni.chat.news_sekta then
-        if color == -5963606 and text:find("%{FFFFFF%}%* CNN %* Сектант:") then
+        if color == -5963606 and text:find("{FFFFFF}%* CNN %* Сектант:") then
             print(text)
             return false
         end
     end
     if not mainIni.chat.hit_ads then
-        if color == -1 and text:find("%{FF6C00%}%* %[Реклама%]:%{00FF0C%}") or text:find("%{FF0000%}отправил рекламу %*%*") then
+        if color == -1 and text:find("{FF6C00}%* %[Реклама%]:{00FF0C}") or text:find("{FF0000}отправил рекламу %*%*") then
             print(text)
             return false
         end
     end
     if not mainIni.chat.propose then
-        if color == -86 and (text:find("%{0088ff%}___________________________________________________________________________________________________________") or text:find("%{0088ff%}%[Pears Project%]: %{aeff00%}Поздравляем")) then
+        if color == -86 and (text:find("{0088ff}___________________________________________________________________________________________________________") or text:find("{0088ff}%[Pears Project%]: {aeff00}Поздравляем")) then
             print(text)
             return false
         end
@@ -2246,23 +2251,12 @@ function dialogFunc()
                 mainIni.config.macrosses = not mainIni.config.macrosses
                 showSettingMacrosses()
             elseif listitem == 1 then
-                macrosses_list.knock = {90, 221}
-                macrosses_list.boot = {90, 219}
-                macrosses_list.members = {90, 186}
-                macrosses_list.contracts = {90, 222}
-                macrosses_list.cancel = {90, 190}
-                macrosses_list.getct = {190, 191}
-                macrosses_list.myc = {90, 188}
-                macrosses_list.invis = {88, 90}
-                macrosses_list.otstrel = {90, 76}
-                macrosses_list.admins = {90, 75}
-                macrosses_list.setting = {35}
-                macrosses_list.screen = {119}
-                macrosses_list.find = {88, 87}
-                macrosses_list.takect = {75}
-                macrosses_list.tempname_otstrel = {90, 49}
-                macrosses_list.tempname_contracts = {90, 50}
-                macrosses_list.tempname_trainings = {90, 51}
+                for k, v in pairs(defaultIni.macrosses) do
+                    macrosses_list[k] = {}
+                    for key in tostring(v):gmatch('[^%s?%+]+') do
+                        table.insert(macrosses_list[k], tonumber(key))
+                    end
+                end
                 showSettingMacrosses()
             elseif listitem == 2 then setting_bind = 'knock'
             elseif listitem == 3 then setting_bind = 'boot'
