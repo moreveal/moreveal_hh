@@ -215,7 +215,7 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
 
-local script_version = 53 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 54 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '2.0' -- версия для вывода в окне настроек, не изменять
 
@@ -985,10 +985,9 @@ function main()
     end
     screenshot = require 'screenshot'
 
-    local playerid = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
-    mainIni.temp.nametag = not getStructElement(readMemory(sampGetPlayerStructPtr(playerid), 4, true), 179, 2, false) == 0
     local ip = select(1, sampGetCurrentServerAddress())..':'..select(2, sampGetCurrentServerAddress())
     if ip ~= '176.32.37.62:7777' then
+        mainIni.temp.nametag = not getStructElement(readMemory(sampGetPlayerStructPtr(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))), 4, true), 179, 2, false) == 0
         mainIni.temp.fakenick = false
         if mainIni.config.onlypp then
             thisScript():unload()
