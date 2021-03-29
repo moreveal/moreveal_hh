@@ -1457,8 +1457,8 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
             if playerid == id and mainIni.temp.accept_ct ~= v.name then
                 local p_x, p_y, p_z = getCharCoordinates(PLAYER_PED)
                 local t_x, t_y, t_z = getCharCoordinates(select(2, sampGetCharHandleBySampPlayerId(playerid)))
-                --emul_rpc('onDisplayGameText', {4, 6000, '~g~OЮeЃ© YЧЬ¶'})
-                if bodypart == 9 then emul_rpc('onDisplayGameText', {1, 4000, '~g~HEADSHOT'}) end
+                emul_rpc('onDisplayGameText', {4, 6000, '~g~OЮeЃ© YЧЬ¶'})
+                --if bodypart == 9 then emul_rpc('onDisplayGameText', {1, 4000, '~g~HEADSHOT'}) end
                 scriptMessage('я убил игрока {800000}'..sampGetPlayerNickname(playerid)..'{FFFFFF} [ {800000}'..playerid..'{FFFFFF} ] с рассто€ни€ '.. math.ceil(getDistanceBetweenCoords3d(p_x, p_y, p_z, t_x, t_y, t_z))..'м')
                 table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name..','..(otstrel_squad and 1 or 0))
                 if mainIni.config.autoscreen then makeScreen() end
@@ -1927,7 +1927,7 @@ function sampev.onServerMessage(color, text)
     end
     if text == "{0088ff}[јгентство]: {FFFFFF}ƒеньги перечислены на ваш банковский счЄт" then
         sampAddChatMessage(text, 0x0088FF)
-        if lastdamage.bodypart == 9 then emul_rpc('onDisplayGameText', {1, 4000, '~g~HEADSHOT'}) end
+        --if lastdamage.bodypart == 9 then emul_rpc('onDisplayGameText', {1, 4000, '~g~HEADSHOT'}) end
         if mainIni.config.autoscreen then makeScreen() end
         return false
     end
