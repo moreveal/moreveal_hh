@@ -44,6 +44,7 @@ defaultIni = {
         cstream = false,
         autoscreen = false,
         automobile = false,
+        autosum = false,
         autofill = false,
         customid = false,
         s_speed = false,
@@ -165,9 +166,11 @@ defaultIni = {
         screen = 119,
         find = 88 .. ' + '.. 87,
         takect = 75,
+        nametag = 90 .. ' + ' .. 66,
         tempname_otstrel = 90 .. ' + ' .. 49,
         tempname_contracts = 90 .. ' + ' .. 50,
-        tempname_trainings = 90 .. ' + ' .. 51
+        tempname_trainings = 90 .. ' + ' .. 51,
+        tempname_real = 90 .. ' + ' .. 52
     },
 
     tempname = {
@@ -215,9 +218,9 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
 
-local script_version = 54 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 55 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '2.0' -- версия для вывода в окне настроек, не изменять
+local text_version = '2.1' -- версия для вывода в окне настроек, не изменять
 
 local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
 
@@ -755,13 +758,15 @@ local newFrame = imgui.OnFrame(
 								imgui.PopFont()
 								imgui.CreatePaddingY(1)
 								imgui.SetCursorPosX(460)
-								imgui.BeginChild("autofuncs_section", imgui.ImVec2(200, 82), true)
+								imgui.BeginChild("autofuncs_section", imgui.ImVec2(200, 85), true)
 									imgui.PushFont(MainContentText)
-										if mimgui.CustomCheckbox(u8'Автоматическое пополнение\nсчёта телефона', cb_automobile) then 
+										if mimgui.CustomCheckbox(u8'Пополнение моб. телефона', cb_automobile) then 
                                             mainIni.config.automobile = cb_automobile[0]
                                         end
-										imgui.CreatePaddingY(10) ---------------------
-										if mimgui.CustomCheckbox(u8'Автоматическая заправка', cb_autofill) then
+                                        if mimgui.CustomCheckbox(u8'Решение примеров при взломе БД', cb_autosum) then
+                                            mainIni.config.autosum = cb_autosum[0]
+                                        end
+										if mimgui.CustomCheckbox(u8'Заправка транспорта', cb_autofill) then
                                             mainIni.config.autofill = cb_autofill[0]
                                         end
 									imgui.PopFont()
@@ -773,12 +778,12 @@ local newFrame = imgui.OnFrame(
 								imgui.PopFont()
 								imgui.CreatePaddingY(1)
 								imgui.SetCursorPosX(460)
-								imgui.BeginChild("checkers_section", imgui.ImVec2(200, 75), true)
+								imgui.BeginChild("checkers_section", imgui.ImVec2(200, 70), true)
 									imgui.PushFont(MainContentText)
 										if mimgui.CustomCheckbox(u8'Чекер контрактов', cb_cstream) then 
                                             mainIni.config.cstream = cb_cstream[0]
                                         end
-										imgui.CreatePaddingY(10) ---------------------
+										imgui.CreatePaddingY(5) ---------------------
 										if mimgui.CustomCheckbox(u8'Чекер отстрела', cb_otstrel) then 
                                             mainIni.config.otstrel = cb_otstrel[0]
                                         end
@@ -964,6 +969,7 @@ function main()
     cb_customctstr = new.bool(mainIni.config.customctstr)
     cb_customid = new.bool(mainIni.config.customid)
     cb_automobile = new.bool(mainIni.config.automobile)
+    cb_autosum = new.bool(mainIni.config.autosum)
     cb_autofill = new.bool(mainIni.config.autofill)
     cb_cstream = new.bool(mainIni.config.cstream)
     cb_otstrel = new.bool(mainIni.config.otstrel)
@@ -1428,7 +1434,7 @@ end
 function showSettingMacrosses()
     local macrosses_array = {}
     for k, v in pairs(macrosses_list) do macrosses_array[k] = layoutMacrossString(k) end
-    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить/выключить невидимость на карте:\t'..macrosses_array.invis..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nВзять последний пришедший контракт:\t'..macrosses_array.takect..'\nВременный ник [Отстрел]:\t'..macrosses_array.tempname_otstrel..'\nВременный ник [Контракты]:\t'..macrosses_array.tempname_contracts..'\nВременный ник [Тренировки]:\t'..macrosses_array.tempname_trainings..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить/выключить невидимость на карте:\t'..macrosses_array.invis..'\nВключить/выключить никнейм:\t'..macrosses_array.nametag..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nВзять последний пришедший контракт:\t'..macrosses_array.takect..'\nВременный ник [Отстрел]:\t'..macrosses_array.tempname_otstrel..'\nВременный ник [Контракты]:\t'..macrosses_array.tempname_contracts..'\nВременный ник [Тренировки]:\t'..macrosses_array.tempname_trainings..'\nВернуть настоящий ник:\t'..macrosses_array.tempname_real..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function layoutMacrossString(m_key)
@@ -1460,7 +1466,7 @@ function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
                 --if bodypart == 9 then emul_rpc('onDisplayGameText', {1, 4000, '~g~HEADSHOT'}) end
                 scriptMessage('Я убил игрока {800000}'..sampGetPlayerNickname(playerid)..'{FFFFFF} [ {800000}'..playerid..'{FFFFFF} ] с расстояния '.. math.ceil(getDistanceBetweenCoords3d(p_x, p_y, p_z, t_x, t_y, t_z))..'м')
                 table.insert(mainIni.stats, '2,0,'..os.time()..','..sampGetPlayerNickname(playerid)..','..select(1, math.modf(damage))..','..lastdamage.weapon.name..','..(otstrel_squad and 1 or 0))
-                if mainIni.config.autoscreen then makeScreen() end
+                if mainIni.config.autoscreen then makeScreen('[ОТС]') end
                 if playerid == cfd then cfd = nil end
                 if v.name == sampGetPlayerNickname(playerid) then
                     v.time = os.time()
@@ -1768,6 +1774,7 @@ if cmd:find('^/id ') then
 end
 
 function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
+    --print(dialogid, style, title, b1, b2, text)
     if text:find('{99ff66}Теперь все видят это имя:') then mainIni.temp.fakenick = true end
     if text:find('{99ff66}Вы вернули своё имя:') then mainIni.temp.fakenick = false end
     if dialogid == 66 then -- меню управления транспортом
@@ -1782,6 +1789,28 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
             return false
         end
     end
+
+    if mainIni.config.autosum then
+        if dialogid == 1036 then -- диалог решения примеров при взломе БД SWAT
+            if text:find('{cccccc}Решите примеры, чтобы взломать базу данных {ffffff}') then
+                local sum = text:match('{ff9000}(.+) =')
+                if sum:find(' ') then sum = sum:gsub(' ', '') end
+                if sum:find('x') then sum = sum:gsub('x', '*') end
+                if sum:find(':') then sum = sum:gsub(':', '/') end
+                local result, error = parseExpression(sum)
+                if result then sampSendDialogResponse(dialogid, 1, -1, result) else print(error) end
+                return false
+            end
+        end
+
+        if dialogid == 1037 then -- юзлесс диалог "Ответ верный"
+            if text:find('{99ff66}Ответ верный!') then
+                sampSendDialogResponse(dialogid, 1, -1, -1)
+                return false
+            end
+        end
+    end
+
     if dialogid == 586 then -- диалог менюшки агентства
         if incInvis then
             sampSendDialogResponse(dialogid, 1, 0, -1)
@@ -1850,7 +1879,7 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
             for line in text:gmatch('[^\r\n]+') do
                 if line:find('{99ff66}') then
                     local fill = line:match('Для полного бака вам требуется: (%d-) литров')
-                    sampSendDialogResponse(dialogid, 1, nil, fill)
+                    sampSendDialogResponse(dialogid, 1, -1, fill)
                 end
             end
             return false
@@ -1890,7 +1919,7 @@ function sampev.onServerMessage(color, text)
     if acc_id ~= nil then
         if text:find('{FF0000}%<%< {0088ff}Агент № '..acc_id..' выполнил контракт на .+, и получил {00BC12}%d+%$ {FF0000}%>%>') then
             local ct_name = text:match('выполнил контракт на (.-), и получил')
-            lua_thread.create(function () wait(500) mainIni.temp.accept_ct = nil end)
+            lua_thread.create(function () wait(1000) mainIni.temp.accept_ct = nil end)
             if cfd == sampGetPlayerIdByNickname(ct_name) then cfd = nil end
             table.insert(mainIni.stats, '1,0,'..os.time()..','..ct_name..','..lastdamage.damage..','..lastdamage.weapon.name..','..text:match('и получил {00BC12}(%d+%$)'))
         end
@@ -1927,11 +1956,11 @@ function sampev.onServerMessage(color, text)
     if text == "{0088ff}[Агентство]: {FFFFFF}Деньги перечислены на ваш банковский счёт" then
         sampAddChatMessage(text, 0x0088FF)
         --if lastdamage.bodypart == 9 then emul_rpc('onDisplayGameText', {1, 4000, '~g~HEADSHOT'}) end
-        if mainIni.config.autoscreen then makeScreen() end
+        if mainIni.config.autoscreen then makeScreen('[КТ]') end
         return false
     end
     if text:find('%[ Мысли %]%: Я положил ящик на склад {ff9000}%[ (.-) %]') then
-        if mainIni.config.autoscreen then makeScreen() end
+        if mainIni.config.autoscreen then makeScreen('[БП]') end
         local ammo, n = text:match('Я положил ящик на склад {......}%[ (.+) | (%d+) ]')
         table.insert(mainIni.stats, '3,'..(ammo:find(',') and ammo:gsub(',','.') or ammo)..','..os.time()..','..n)
     end
@@ -2111,6 +2140,107 @@ function getInvisibility(id)
     if sampGetPlayerColor(id) == 16777215 then return true end
 end
 
+function characterPresent(stringParam, character)
+    for i=1, #stringParam do
+        if stringParam:sub(i, i) == character then return true end
+    end
+    return false
+end
+
+function getNumber(stringParam)
+    local validCharacters = "0123456789.-"
+    local foundDigit = false
+    local i = 1
+    local currentCharacter = stringParam:sub(i, i)
+    while characterPresent(validCharacters, currentCharacter) do
+        if i == 1 then validCharacters = "0123456789." end
+        if currentCharacter == "." then validCharacters = "0123456789" end
+        if characterPresent("0123456789", currentCharacter) then foundDigit = true end
+        i = i + 1
+        if i > #stringParam then break end
+        currentCharacter = stringParam:sub(i, i)
+    end
+    if not foundDigit then i = 1 end
+    local number = tonumber(stringParam:sub(1, i - 1))
+    return number, stringParam:sub(i, #stringParam)
+end
+
+function parseExpression(expression, expectEndParentheses)
+    local expectingExpression = true
+    local lastExpressionWasParenthetical = false
+    local operators = "+-/*^"
+    local parts = {}
+    local foundEndParentheses = false
+    expectEndParentheses = expectEndParentheses or false
+    while expression ~= "" do
+        local nextNumber, expressionAfterNumber = getNumber(expression)
+        local nextCharacter = expression:sub(1, 1)
+        local nextPiece = expression:sub(1, 5)
+        if #expression <= 5 then nextPiece = nextPiece.." [end]" end
+        if expectingExpression then
+            if nextCharacter == "(" then
+                local nestedExpressionValue, expressionAfterParentheses = parseExpression(expression:sub(2, #expression), true)
+                if nestedExpressionValue == nil then return nestedExpressionValue, expressionAfterParentheses end
+                table.insert(parts, nestedExpressionValue)
+                expression = expressionAfterParentheses
+                lastExpressionWasParenthetical = true
+            else
+                if nextNumber == nil then return nil, "Expected number or '(', but found '"..nextPiece.."'" end
+                table.insert(parts, nextNumber)
+                expression = expressionAfterNumber
+                lastExpressionWasParenthetical = false
+            end
+        elseif characterPresent(operators, nextCharacter) then
+            table.insert(parts, nextCharacter)
+            expression = expression:sub(2, #expression)
+        elseif nextCharacter == "(" or (lastExpressionWasParenthetical and nextNumber ~= nil) then table.insert(parts, "*")
+        elseif nextCharacter == ")" then
+            if expectEndParentheses then
+                expression = expression:sub(2, #expression)
+                foundEndParentheses = true
+                break
+            else return nil, "')' present without matching '(' at '"..nextPiece.."'" end
+        else return nil, "Expected expression, but found '"..nextPiece.."'" end
+        expectingExpression = not expectingExpression
+    end
+    if expectEndParentheses and not foundEndParentheses then return nil, "Expression unexpectedly ended ('(' present without matching ')')" end
+    if expectingExpression then return nil, "Expression unexpectedly ended" end
+    local i = #parts
+    while i >= 1 do
+        if parts[i] == "^" then
+            parts[i-1] = parts[i-1]^parts[i+1]
+            table.remove(parts, i+1)
+            table.remove(parts, i)
+        end
+        i = i-1
+    end
+    i = 1
+    while i <= #parts do
+        if parts[i] == "*" then
+            parts[i-1] = parts[i-1]*parts[i+1]
+            table.remove(parts, i+1)
+            table.remove(parts, i)
+        elseif parts[i] == "/" then
+            parts[i-1] = parts[i-1]/parts[i+1]
+            table.remove(parts, i+1)
+            table.remove(parts, i)
+        else i = i+1 end
+    end
+    i = 1
+    while i <= #parts do
+        if parts[i] == "+" then
+            parts[i-1] = parts[i-1]+parts[i+1]
+            table.remove(parts, i+1)
+            table.remove(parts, i)
+        elseif parts[i] == "-" then
+            parts[i-1] = parts[i-1]-parts[i+1]
+            table.remove(parts, i+1)
+            table.remove(parts, i)
+        else i = i+1 end
+    end
+    return parts[1], expression
+end
+
 function sampGetPlayerIdByNickname(nick)
     local _, myid = sampGetPlayerIdByCharHandle(playerPed)
     if tostring(nick) == sampGetPlayerNickname(myid) then return myid end
@@ -2204,6 +2334,10 @@ function macrossesFunc()
                     end
                     wait(300)
 
+                elseif isKeysDown(macrosses_list.nametag, true) then
+                    sampSendChat('/nametag')
+                    wait(300)
+
                 elseif isKeysDown(macrosses_list.otstrel, true) then
                     openOtstrelList()
                     wait(300)
@@ -2227,6 +2361,7 @@ function macrossesFunc()
                 elseif isKeysDown(macrosses_list.tempname_otstrel, true) then incFakeNick('otstrel') wait(300)
                 elseif isKeysDown(macrosses_list.tempname_contracts, true) then incFakeNick('contracts') wait(300)
                 elseif isKeysDown(macrosses_list.tempname_trainings, true) then incFakeNick('trainings') wait(300)
+                elseif isKeysDown(macrosses_list.tempname_real, true) then if mainIni.temp.fakenick then incFakeNick('real') wait(300) end
 
                 end
             end
@@ -2235,9 +2370,9 @@ function macrossesFunc()
 end
 
 function incFakeNick(type)
-    -- types: otstrel, contracts, trainings
-    if mainIni.temp.fakenick then sampSendChat('/sign') end
-    sampSendChat('/sign '..mainIni['tempname'][type])
+    -- types: otstrel, contracts, trainings, real
+    if mainIni.temp.fakenick or type == 'real' then sampSendChat('/sign') end
+    if type ~= 'real' then sampSendChat('/sign '..mainIni['tempname'][type]) end
 end
 
 function dialogFunc()
@@ -2265,15 +2400,17 @@ function dialogFunc()
             elseif listitem == 7 then setting_bind = 'getct'
             elseif listitem == 8 then setting_bind = 'myc'
             elseif listitem == 9 then setting_bind = 'invis'
-            elseif listitem == 10 then setting_bind = 'otstrel'
-            elseif listitem == 11 then setting_bind = 'admins'
-            elseif listitem == 12 then setting_bind = 'find'
-            elseif listitem == 13 then setting_bind = 'screen'
-            elseif listitem == 14 then setting_bind = 'takect'
-            elseif listitem == 15 then setting_bind = 'tempname_otstrel'
-            elseif listitem == 16 then setting_bind = 'tempname_contracts'
-            elseif listitem == 17 then setting_bind = 'tempname_trainings'
-            elseif listitem == 18 then setting_bind = 'setting' end 
+            elseif listitem == 10 then setting_bind = 'nametag'
+            elseif listitem == 11 then setting_bind = 'otstrel'
+            elseif listitem == 12 then setting_bind = 'admins'
+            elseif listitem == 13 then setting_bind = 'find'
+            elseif listitem == 14 then setting_bind = 'screen'
+            elseif listitem == 15 then setting_bind = 'takect'
+            elseif listitem == 16 then setting_bind = 'tempname_otstrel'
+            elseif listitem == 17 then setting_bind = 'tempname_contracts'
+            elseif listitem == 18 then setting_bind = 'tempname_trainings'
+            elseif listitem == 19 then setting_bind = 'tempname_real'
+            elseif listitem == 20 then setting_bind = 'setting' end 
             inicfg.save(mainIni, config_path)
         end
 
@@ -2557,12 +2694,13 @@ function weaponSettings()
     sampShowDialog(D_GSETTING_ONE, 'Настройка', weapon_line, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
-function makeScreen()
+function makeScreen(tag)
+    if not tag then tag = '' end
     if mainIni.config.screen_type then -- Используя модуль
         lua_thread.create(function ()
-            wait(230)
+            wait(250)
             local filePath = screenshot.getUserDirectoryPath()..'/SAMP/screens'
-            local fileName = os.date('%Y-%m-%d %H-%M-%S')
+            local fileName = os.date(tag..' %Y-%m-%d %H-%M-%S')
             screenshot.requestEx(filePath, fileName)
         end)
     else -- Используя сторонние программы
@@ -2580,8 +2718,8 @@ function scriptBody()
     while true do
         wait(0)
 
-        local pressed_screen = isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C) and true or false
-        local showed = true if pressed_screen and mainIni.config.without_screen then showed = false end
+        local pressed_screen = isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C)
+        local showed = ((pressed_screen and mainIni.config.without_screen) and false or true)
         displayHud(mainIni.config.shud and true or false)
 
         if showed and mainIni.config.hud then
