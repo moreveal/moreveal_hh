@@ -2719,7 +2719,7 @@ function scriptBody()
         wait(0)
 
         local pressed_screen = isKeysDown(macrosses_list.screen, true) or isKeyDown(0x74) or isKeyDown(0x77) or isKeyDown(0x2C)
-        local showed = ((pressed_screen and mainIni.config.without_screen) and false or true)
+        local showed = true if pressed_screen and mainIni.config.without_screen then showed = false end
         displayHud(mainIni.config.shud and true or false)
 
         if showed and mainIni.config.hud then
