@@ -763,7 +763,7 @@ local newFrame = imgui.OnFrame(
 										if mimgui.CustomCheckbox(u8'Пополнение моб. телефона', cb_automobile) then 
                                             mainIni.config.automobile = cb_automobile[0]
                                         end
-                                        if mimgui.CustomCheckbox(u8'Решение примеров при взломе БД', cb_autosum) then
+                                        if mimgui.CustomCheckbox(u8'Взлом базы данных SWAT', cb_autosum) then
                                             mainIni.config.autosum = cb_autosum[0]
                                         end
 										if mimgui.CustomCheckbox(u8'Заправка транспорта', cb_autofill) then
