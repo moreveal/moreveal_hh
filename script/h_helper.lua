@@ -218,11 +218,9 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
 
-local script_version = 56 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 57 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '2.1' -- версия для вывода в окне настроек, не изменять
-
-local update_url = 'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/update.cfg'
 
 local time_find = os.clock() -- таймер /find
 local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
@@ -1036,7 +1034,7 @@ function main()
     end
 
     local list = {
-        update_url,
+        'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua',
         'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/last_news.txt'
     }
 
@@ -1044,7 +1042,7 @@ function main()
         httpRequest(url, nil, function(response, code, headers, status)
             if response then
                 if index == 1 then
-                    new_version, text_new_version = response:match('(%d+) | (.+)')
+                    new_version, text_new_version = response:match('local script_version = (%d+)'), response:match("local text_version = '(.-)'")
                     if tonumber(new_version) > script_version then updateScript() update = true end
                 elseif index == 2 then
                     changelog = u8:decode(response)
@@ -1455,6 +1453,7 @@ end
 
 function sampev.onSendGiveDamage(playerid, damage, weapon, bodypart)
     lastdamage.playerid, lastdamage.damage, lastdamage.weapon, lastdamage.bodypart = playerid, damage, {id = weapon, name = weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)]}, bodypart
+
     if (sampGetPlayerHealth(playerid) - damage <= 0 or (weapon == 34 and bodypart == 9)) and getCharArmour(select(2, sampGetCharHandleBySampPlayerId(playerid))) <= 0 then
         if playerid == cfd then cfd = nil end
         for k, v in pairs(otstrel_list) do
@@ -1979,7 +1978,10 @@ function sampev.onServerMessage(color, text)
     --[[if text:find('%[ Мысли %]: Я закрыла* своё лицо {FF6347}%[ Никнейм отключён %]') or text:find('%[ Мысли %]: Я открыла* своё лицо {99ff66}%[ Никнейм включён %]') then end]]
     if text == '[ Мысли ]: Я не могу видеть список потенциальных жертв' then return false end
     if text == '[ Мысли ]: Я не могу искать человека' then return false end
-    if text == '[ Мысли ]: На его нет контракта' then local result = text:gsub('его', 'него') return {color, result} end
+    if text == '[ Мысли ]: На его нет контракта' then 
+        local result = text:gsub('его', 'него') 
+        return {color, result} 
+    end
 
     if mainIni.config.anonymizer then
         for k, v in pairs(anonymizer_names) do
