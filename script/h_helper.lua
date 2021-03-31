@@ -1048,7 +1048,7 @@ function main()
                     changelog = u8:decode(response)
                 end
             else
-                print(url, 'Ошибка при получении последней версии скрипта', code)
+                scriptMessage('Произошла ошибка при попытке получения последней версии скрипта.')
             end
         end)
     end
