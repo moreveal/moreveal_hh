@@ -905,6 +905,7 @@ local newFrame = imgui.OnFrame(
 {cc0000}/cfd [id] {ffffff}- посто€нный поиск игрока\n\
 {cc0000}/zask [id] {ffffff}- запросить контракт\n\
 {cc0000}/autogoc [цена] {ffffff}- автоматическое вз€тие пришедшего контракта\n\
+{cc0000}/calc [пример] {ffffff}- решение математического примера\n\
 {cc0000}/shud {ffffff}- вариант отображени€ стандартного HUD GTA: San Andreas\n\
 {cc0000}/setcolor {ffffff}- быстрый выбор цвета организации\n\
 {cc0000}/otstrel_list {ffffff}- просмотр людей из списка отстрела в сети")
@@ -1110,6 +1111,17 @@ function main()
             end
         else
             scriptMessage('јвтоматическое вз€тие контракта: {FF6347}/autogoc [сумма]')
+        end
+    end)
+
+    sampRegisterChatCommand('calc', function(arg)
+        local sum = arg:find('%s*') and arg:gsub(' ', '') or arg
+        local result, errorMessage = parseExpression(sum)
+        if result then 
+            scriptMessage(arg..' = {42aaff}'..result)
+        else 
+            scriptMessage('ѕроизошла ошибка. ѕодробна€ информаци€ в консоли.')
+            print(errorMessage) 
         end
     end)
 
