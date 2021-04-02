@@ -165,7 +165,7 @@ defaultIni = {
         setting = 35,
         screen = 119,
         find = 88 .. ' + '.. 87,
-        takect = 75,
+        takect = 90 .. ' + ' .. 85,
         nametag = 90 .. ' + ' .. 66,
         tempname_otstrel = 90 .. ' + ' .. 49,
         tempname_contracts = 90 .. ' + ' .. 50,
@@ -218,9 +218,9 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
 
-local script_version = 57 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 58 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '2.1' -- версия для вывода в окне настроек, не изменять
+local text_version = '2.2' -- версия для вывода в окне настроек, не изменять
 
 local time_find = os.clock() -- таймер /find
 local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
@@ -736,7 +736,7 @@ local newFrame = imgui.OnFrame(
 								imgui.CreatePaddingY(1)
 								imgui.BeginChild("chat_section", imgui.ImVec2(200, 105), true)
 									imgui.PushFont(MainContentText)
-										if mimgui.CustomCheckbox(u8'OOC-чат по уполчанию', cb_ooconly) then 
+										if mimgui.CustomCheckbox(u8'OOC-чат по умолчанию', cb_ooconly) then 
                                             mainIni.config.ooc_only = cb_ooconly[0]
                                         end
 										imgui.CreatePaddingY(5) ---------------------
@@ -1430,9 +1430,31 @@ function sampev.onPlayerQuit(playerid, reason)
 end
 
 function showSettingMacrosses()
-    local macrosses_array = {}
-    for k, v in pairs(macrosses_list) do macrosses_array[k] = layoutMacrossString(k) end
-    sampShowDialog(D_MSETTING, 'Макросы', 'Название\tЗначение\nБинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X')..'\n{cccccc}Выставить значения по умолчанию\nВырубить ближайшего к себе игрока:\t'..macrosses_array.knock..'\nЗакинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot..'\nОткрыть список членов организации онлайн:\t'..macrosses_array.members..'\nОткрыть список контрактов:\t'..macrosses_array.contracts..'\nОтказаться от контракта:\t'..macrosses_array.cancel..'\nВзять последний контракт из зоны прорисовки:\t'..macrosses_array.getct..'\nПосмотреть информацию о взятом контракте:\t'..macrosses_array.myc..'\nВключить/выключить невидимость на карте:\t'..macrosses_array.invis..'\nВключить/выключить никнейм:\t'..macrosses_array.nametag..'\nСписок отстрела онлайн:\t'..macrosses_array.otstrel..'\nАдминистрация онлайн:\t'..macrosses_array.admins..'\nНайти человека из [/cfd]:\t'..macrosses_array.find..'\nСочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen..'\nВзять последний пришедший контракт:\t'..macrosses_array.takect..'\nВременный ник [Отстрел]:\t'..macrosses_array.tempname_otstrel..'\nВременный ник [Контракты]:\t'..macrosses_array.tempname_contracts..'\nВременный ник [Тренировки]:\t'..macrosses_array.tempname_trainings..'\nВернуть настоящий ник:\t'..macrosses_array.tempname_real..'\nОткрыть меню настроек:\t'..macrosses_array.setting, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
+    local macrosses_array = {} for k, v in pairs(macrosses_list) do macrosses_array[k] = layoutMacrossString(k) end
+    local dialog_array, dialog_text = {
+        'Бинды активны:\t'..(mainIni.config.macrosses and '{008000}V' or '{ff0000}X'),
+        '{cccccc}Выставить значения по умолчанию',
+        'Вырубить ближайшего к себе игрока:\t'..macrosses_array.knock,
+        'Закинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot,
+        'Открыть список членов организации онлайн:\t'..macrosses_array.members,
+        'Отказаться от контракта:\t'..macrosses_array.cancel,
+        'Взять последний контракт из зоны прорисовки:\t'..macrosses_array.getct,
+        'Посмотреть информацию о взятом контракте:\t'..macrosses_array.myc,
+        'Включить/выключить невидимость на карте:\t'..macrosses_array.invis,
+        'Включить/выключить никнейм:\t'..macrosses_array.nametag,
+        'Список отстрела онлайн:\t'..macrosses_array.otstrel,
+        'Администрация онлайн:\t'..macrosses_array.admins,
+        'Найти человека из [/cfd]:\t'..macrosses_array.find,
+        'Сочетание клавиш, нажимаемое при автоскриншоте:\t'..macrosses_array.screen,
+        'Взять последний пришедший контракт:\t'..macrosses_array.takect,
+        'Временный ник [Отстрел]:\t'..macrosses_array.tempname_otstrel,
+        'Временный ник [Контракты]:\t'..macrosses_array.tempname_contracts,
+        'Временный ник [Тренировки]:\t'..macrosses_array.tempname_trainings,
+        'Вернуть настоящий ник:\t'..macrosses_array.tempname_real,
+        'Открыть меню настроек:\t'..macrosses_array.setting
+    }, nil
+    for k,v in pairs(dialog_array) do dialog_text = (dialog_text == nil and 'Название\tЗначение\n'..v..'\n' or dialog_text..v..'\n') end
+    sampShowDialog(D_MSETTING, 'Макросы', dialog_text, 'Ок', 'Отмена', DIALOG_STYLE_TABLIST_HEADERS)
 end
 
 function layoutMacrossString(m_key)
@@ -1993,80 +2015,31 @@ function sampev.onServerMessage(color, text)
         end
     end
 
-    if not mainIni.chat.misli then
-        if text:find('%[ Мысли %]: ') then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.p_adm then
-        if text:find('%[RP%]Pears Project:') then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.frac then
-        if text:find('%*%* %{......%}.+№ %d+: {......}.+') or text:find('%*%* %{......%}.+ %{......%}.+%{......}%[%d+%]: .+') then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.fam then
-        if text:find('%[F%] .+ %{......%}.+%[%d+%]: {......}.+') then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.ads then
-        if text:find('%* %[.*Реклама%]:{......}.+, {......}Контакт: [^Неизвестный]') or text:find('%* Обработал:{......} .+ %*') then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.invites then
-        if (color == -86 or color == -858993494) and (text:find("%*%*%p+{") or text:find("%[ {00cc00}Открыт {ffffff}| {00cc00}/invites {ffffff}%]") or text:find("Открыт призыв в NGSA: %[ {333300}Открыт {ffffff}|")) then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.gos_ads then
-        if (color == 869072810 and text:find("выдал ордер адвокату") or (color == -86 or color == -858993494) and (text:find("%*%*%p+%P") or text:find("%a+_%a+:"))) then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.a_adm then
-        if (text:find("%{ff9000%}%* %[ADM%]%a+_%a+%[%d+%]:") or text:find("{0088ff}%(%( %a+_%a+%[%d+%]%: {FFFFFF}")) then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.news_cnn then
-        if (color == -5963606 or color == -1697828182) and (text:find("{FFFFFF}%* CNN %* %a+_%a+:") or text:find("%[Прямой Эфир%]")) then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.news_sekta then
-        if color == -5963606 and text:find("{FFFFFF}%* CNN %* Сектант:") then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.hit_ads then
-        if color == -1 and text:find("{FF6C00}%* %[Реклама%]:{00FF0C}") or text:find("{FF0000}отправил рекламу %*%*") then
-            print(text)
-            return false
-        end
-    end
-    if not mainIni.chat.propose then
-        if color == -86 and (text:find("{0088ff}___________________________________________________________________________________________________________") or text:find("{0088ff}%[Pears Project%]: {aeff00}Поздравляем")) then
-            print(text)
-            return false
-        end
-    end
+    if text:find('сбил с ног .+, ударом по голове%.') then lastknocked = sampGetPlayerIdByNickname(text:match('с ног (.+), ударом')) end
 
-    if text:find('сбил с ног .+, ударом по голове%.') then lastknocked = sampGetPlayerIdByNickname(text:match('с ног (.-), ударом')) end
+    local chat_filter = {
+        ['misli'] = text:find('%[ Мысли %]: '),
+        ['p_adm'] = text:find('%[RP%]Pears Project:'),
+        ['frac'] = text:find('%*%* %{......%}.+№ %d+: {......}.+') or text:find('%*%* %{......%}.+ %{......%}.+%{......}%[%d+%]: .+'),
+        ['fam'] = text:find('%[F%] .+ %{......%}.+%[%d+%]: {......}.+'),
+        ['ads'] = text:find('%* %[.*Реклама%]:{......}.+, {......}Контакт: [^Неизвестный]') or text:find('%* Обработал:{......} .+ %*'),
+        ['invites'] = (color == -86 or color == -858993494) and (text:find("%*%*%p+{") or text:find("%[ {00cc00}Открыт {ffffff}| {00cc00}/invites {ffffff}%]") or text:find("Открыт призыв в NGSA: %[ {333300}Открыт {ffffff}|")),
+        ['gos_ads'] = (color == 869072810 and text:find("выдал ордер адвокату") or (color == -86 or color == -858993494) and (text:find("%*%*%p+%P") or text:find("%a+_%a+:"))),
+        ['a_adm'] = (text:find("%{ff9000%}%* %[ADM%]%a+_%a+%[%d+%]:") or text:find("{0088ff}%(%( %a+_%a+%[%d+%]%: {FFFFFF}")),
+        ['news_cnn'] = (color == -5963606 or color == -1697828182) and (text:find("{FFFFFF}%* CNN %* %a+_%a+:") or text:find("%[Прямой Эфир%]")),
+        ['news_sekta'] = color == -5963606 and text:find("{FFFFFF}%* CNN %* Сектант:"),
+        ['hit_ads'] = color == -1 and text:find("{FF6C00}%* %[Реклама%]:{00FF0C}") or text:find("{FF0000}отправил рекламу %*%*"),
+        ['propose'] = color == -86 and (text:find("{0088ff}___________________________________________________________________________________________________________") or text:find("{0088ff}%[Pears Project%]: {aeff00}Поздравляем"))
+    }
+
+    for index, result in pairs(chat_filter) do
+        if not mainIni['chat'][index] then
+            if result then
+                print(text)
+                return false
+            end
+        end
+    end
 end
 
 function sampev.onPlayerStreamIn(playerid, team, model, position)
@@ -2108,7 +2081,7 @@ function sampev.onPlayerStreamOut(playerid)
     end]]
 end
 
-function sampev.onPlaySound(id)
+function sampev.onPlaySound(id, position)
     if id == 40405 then 
         if mainIni.config.cstream then
             return false
@@ -2122,6 +2095,7 @@ function sampev.onPlaySound(id)
 end
 
 function sampev.onSendChat(msg)
+    if msg:find('{......}') then msg = msg:gsub('{......}', '') end
     if mainIni.config.ooc_only then
         if not msg:find('^>') then
             sampSendChat('/b '..msg)
@@ -2136,6 +2110,7 @@ function sampev.onSendChat(msg)
             end
         end
     end
+    return {msg}
 end
 
 function getInvisibility(id)
@@ -2292,8 +2267,8 @@ function macrossesFunc()
                     end
 
                 elseif isKeysDown(macrosses_list.boot, true) and lastknocked ~= nil then
-                    goKeyPressed(78)
                     lua_thread.create(function ()
+                    goKeyPressed(0x4E)
                         while not sampTextdrawIsExists(2202) do wait(0) end
                         sampSendClickTextdraw(2202)
                         while not sampTextdrawIsExists(2176) do wait(0) end
@@ -2330,6 +2305,8 @@ function macrossesFunc()
                 elseif isKeysDown(macrosses_list.invis, true) then
                     if getInvisibility(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) then
                         sampSendChat('/inv')
+                        --sampAddChatMessage('[ Мысли ]: Теперь я отображаюсь на карте.', 0xCCCCCC)
+                        --emul_rpc('onPlaySound', {6400, {x = 0.0, y = 0.0, z = 0.0}})
                     else
                         sampSendChat('/hmenu')
                         incInvis = true
@@ -3129,6 +3106,7 @@ function onWindowMessage(msg, wparam, lparam)
 						setting_bind = nil
 						lockPlayerControl(false)
 						nkeys_bind = {}
+                        inicfg.save(mainIni, config_path)
 					end
 				else
 					if #nkeys_bind < 3 then
