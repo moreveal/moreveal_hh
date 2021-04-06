@@ -218,7 +218,7 @@ local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента 
 local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
 local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
 
-local script_version = 58 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 59 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '2.2' -- версия для вывода в окне настроек, не изменять
 
@@ -908,6 +908,7 @@ local newFrame = imgui.OnFrame(
 {cc0000}/calc [пример] {ffffff}- решение математического примера\n\
 {cc0000}/shud {ffffff}- вариант отображения стандартного HUD GTA: San Andreas\n\
 {cc0000}/setcolor {ffffff}- быстрый выбор цвета организации\n\
+{cc0000}/hh_turnoff {ffffff}- выключение скрипта\n\
 {cc0000}/otstrel_list {ffffff}- просмотр людей из списка отстрела в сети")
 									imgui.EndChild()
 									imgui.SameLine(nil, 0)
@@ -1115,15 +1116,21 @@ function main()
     end)
 
     sampRegisterChatCommand('calc', function(arg)
-        local sum = arg:find('%s*') and arg:gsub(' ', '') or arg
-        local result, errorMessage = parseExpression(sum)
-        if result then 
-            scriptMessage(arg..' = {42aaff}'..result)
-        else 
-            scriptMessage('Произошла ошибка. Подробная информация в консоли.')
-            print(errorMessage) 
+        if #arg > 0 then
+            local sum = arg:find('%s*') and arg:gsub(' ', '') or arg
+            local result, errorMessage = parseExpression(sum)
+            if result then 
+                scriptMessage(arg..' = {42aaff}'..result)
+            else 
+                scriptMessage('Произошла ошибка. Подробная информация в консоли.')
+                print(errorMessage) 
+            end
+        else
+            scriptMessage('Решить пример: {FF6347}/calc [пример]')
         end
     end)
+
+    sampRegisterChatCommand('hh_turnoff', function() thisScript():unload() end)
 
     sampRegisterChatCommand('shud', function(arg)
         mainIni.config.shud = not mainIni.config.shud
@@ -1449,6 +1456,7 @@ function showSettingMacrosses()
         'Вырубить ближайшего к себе игрока:\t'..macrosses_array.knock,
         'Закинуть ранее вырубленного игрока в багажник:\t'..macrosses_array.boot,
         'Открыть список членов организации онлайн:\t'..macrosses_array.members,
+        'Открыть список контрактов:\t'..macrosses_array.contracts,
         'Отказаться от контракта:\t'..macrosses_array.cancel,
         'Взять последний контракт из зоны прорисовки:\t'..macrosses_array.getct,
         'Посмотреть информацию о взятом контракте:\t'..macrosses_array.myc,
@@ -1759,7 +1767,8 @@ if cmd:find('^/id ') then
             for k, v in pairs(nick_colours) do
                 if string.nlower(v):find(target_lower) then
                     for i = 0, sampGetMaxPlayerId() do
-                        if (sampGetPlayerColor(i) == k) and (sampIsPlayerConnected(i) or select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)) == i) then
+                        local _, l_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+                        if (sampGetPlayerColor(i) == k) and (sampIsPlayerConnected(i) or i == l_id) then
                             table.insert(players, {name = sampGetPlayerNickname(i), id = i, colour = sampGetPlayerColor(i), level = sampGetPlayerScore(i), ping = sampGetPlayerPing(i)})
                         end
                     end
@@ -1767,13 +1776,15 @@ if cmd:find('^/id ') then
             end
             if not target:find('%D') then
                 local id = tonumber(target)
-                if sampIsPlayerConnected(tonumber(target_lower)) or select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)) == tonumber(target_lower) then
+                local _, l_id = sampGetPlayerIdByCharHandle(PLAYER_PED) 
+                if sampIsPlayerConnected(tonumber(target_lower)) or tonumber(target_lower) == l_id then
                     table.insert(players, {name = sampGetPlayerNickname(id), id = id, colour = sampGetPlayerColor(id), level = sampGetPlayerScore(id), ping = sampGetPlayerPing(id)})
                 end
             end
             
             for i = 0, sampGetMaxPlayerId() do
-                if sampIsPlayerConnected(i) or select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)) == i then
+                local _, l_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+                if sampIsPlayerConnected(i) or i == l_id then
                     if string.nlower(sampGetPlayerNickname(i)):find(target_lower) or sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))):find(target_lower) then
                         table.insert(players, {name = sampGetPlayerNickname(i), id = i, colour = sampGetPlayerColor(i), level = sampGetPlayerScore(i), ping = sampGetPlayerPing(i)})
                     end
@@ -2319,6 +2330,7 @@ function macrossesFunc()
                         sampSendChat('/inv')
                         --sampAddChatMessage('[ Мысли ]: Теперь я отображаюсь на карте.', 0xCCCCCC)
                         --emul_rpc('onPlaySound', {6400, {x = 0.0, y = 0.0, z = 0.0}})
+                        --addOneOffSound(0.0, 0.0, 0.0, 6400)
                     else
                         sampSendChat('/hmenu')
                         incInvis = true
@@ -2376,7 +2388,28 @@ function dialogFunc()
                 mainIni.config.macrosses = not mainIni.config.macrosses
                 showSettingMacrosses()
             elseif listitem == 1 then
-                for k, v in pairs(defaultIni.macrosses) do
+                local mac = {
+                    knock = 90 ..' + '.. 221,
+                    boot = 90 ..' + '.. 219,
+                    members = 90 ..' + '.. 186,
+                    contracts = 90 ..' + '.. 222,
+                    cancel = 90 .. ' + '.. 190,
+                    getct = 190 .. ' + '.. 191,
+                    myc = 90 .. ' + '.. 188,
+                    invis = 88 .. ' + '.. 90,
+                    otstrel = 90 .. ' + '.. 76,
+                    admins = 90 .. ' + '.. 75,
+                    setting = 35,
+                    screen = 119,
+                    find = 88 .. ' + '.. 87,
+                    takect = 90 .. ' + ' .. 85,
+                    nametag = 90 .. ' + ' .. 66,
+                    tempname_otstrel = 90 .. ' + ' .. 49,
+                    tempname_contracts = 90 .. ' + ' .. 50,
+                    tempname_trainings = 90 .. ' + ' .. 51,
+                    tempname_real = 90 .. ' + ' .. 52
+                }
+                for k,v in pairs(mac) do
                     macrosses_list[k] = {}
                     for key in tostring(v):gmatch('[^%s?%+]+') do
                         table.insert(macrosses_list[k], tonumber(key))
@@ -2714,21 +2747,21 @@ function scriptBody()
         displayHud(mainIni.config.shud and true or false)
 
         if showed and mainIni.config.hud then
-            local health = getCharHealth(PLAYER_PED) < 100 and getCharHealth(PLAYER_PED) > -1 and getCharHealth(PLAYER_PED) or 100
             local weapon = getCurrentCharWeapon(PLAYER_PED)
             local money_string = setpoint(getPlayerMoney(PLAYER_HANDLE))..'$'
             local weaponline = string.upper(weapons_list[((weapon ~= nil and weapon <= 19) and weapon + 1 or weapon)])..(weapon > 15 and weapon ~= 46 and ' ('..getAmmoInClip() ..'/'.. getAmmoInCharWeapon(PLAYER_PED, weapon) - getAmmoInClip()..')' or '')
 
             renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos, 357, 30, 2852126720.0)
 
+            local arm_len, heal_len = math.ceil(357/100*getCharArmour(PLAYER_PED)), math.ceil(357/160*getCharHealth(PLAYER_PED))
             if getCharArmour(PLAYER_PED) ~= 0 then
                 renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 27, 357, 5, 0xFF2d2d2d)
-                renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(357/100*getCharArmour(PLAYER_PED)), mainIni.hud.ypos + 27, math.ceil(357/100*getCharArmour(PLAYER_PED)), 5, 0xFFc7d3e2)
+                renderDrawBox(mainIni.hud.xpos + 357 - arm_len, mainIni.hud.ypos + 27, arm_len, 5, 0xFFC7D3E2)
                 renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 33, 357, 5, 0xFF2d2d2d)
-                renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(3.57 * health), mainIni.hud.ypos + 33, math.ceil(3.57 * health), 5, 0xFFce7c7c)
+                renderDrawBox(mainIni.hud.xpos + 357 - heal_len, mainIni.hud.ypos + 33, heal_len, 5, 0xFFCE7C7C)
             else
                 renderDrawBox(mainIni.hud.xpos, mainIni.hud.ypos + 27, 357, 5, 0xFF2d2d2d)
-                renderDrawBox(mainIni.hud.xpos + 357 - math.ceil(3.57 * health), mainIni.hud.ypos + 27, math.ceil(3.57 * health), 5, 0xFFce7c7c)
+                renderDrawBox(mainIni.hud.xpos + 357 - heal_len, mainIni.hud.ypos + 27, heal_len, 5, 0xFFCE7C7C)
             end
 
             renderDrawLine(mainIni.hud.xpos, mainIni.hud.ypos, mainIni.hud.xpos + 357, mainIni.hud.ypos, 1, 0xFFFFFFFF)
