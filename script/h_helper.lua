@@ -584,10 +584,10 @@ local newFrame = imgui.OnFrame(
                                             cb_stypemodule[0] = mainIni.config.screen_type
                                         end
 										--------------------- imgui.CreatePaddingY(5) ---------------------
-										if mimgui.CustomCheckbox(u8'Загружать список отстрела\nиз портала ICA', cb_otsauto) then 
+										if mimgui.CustomCheckbox(u8'Загружать список отстрела\nс портала ICA', cb_otsauto) then 
                                             mainIni.config.otstrel_type = cb_otsauto[0]
                                             cb_otslocal[0] = not mainIni.config.otstrel_type
-                                            loadOtstrelList(1)
+                                            lua_thread.create(loadOtstrelList, 1)
                                         end
 										--------------------- imgui.CreatePaddingY(5) ---------------------
 										if mimgui.CustomCheckbox(u8'Загружать список отстрела\nиз локального файла', cb_otslocal) then 
@@ -598,7 +598,7 @@ local newFrame = imgui.OnFrame(
                                                 scriptMessage('Файл создан {CCCCCC}[ ../config/Hitman Helper/otstrel.txt ]')
                                                 scriptMessage('Заполните его, размещая каждый последующий никнейм на новой строке')
                                             end
-                                            loadOtstrelList(1)
+                                            lua_thread.create(loadOtstrelList, 1)
                                         end
 									imgui.PopFont()
 								imgui.EndChild()
@@ -1312,7 +1312,7 @@ function loadOtstrelList(type)
     otstrel_list = {}
     if mainIni.config.otstrel_type then
         local response, code, headers, status = httpRequest('http://pphitman.5nx.org/static.php?p=otstrel&sid=614c63f9d10863cc46796f1397f8a3ff')
-        if response then
+        if response and u8:decode(response):find('<div class="quotecontent">.+') then
             for name in string.gmatch(u8:decode(response):match('<div class="quotecontent">(.+)'), '(%w+_%w+)') do
                 table.insert(otstrel_list, {name = name}) 
             end
