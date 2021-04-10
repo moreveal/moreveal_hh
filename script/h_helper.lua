@@ -45,20 +45,20 @@ for path, url in pairs(t_libs) do
 end
 --------------------------------
 
-local sampevAvailable, sampev = pcall(require, 'samp.events')
-local inicfgAvailable, inicfg = pcall(require, 'inicfg')
-local vkeysAvailable, vkeys = pcall(require, 'vkeys')
-local luasocketAvailable, socket = pcall(require, 'luasocket.socket')
-local copasAvailable, copas = pcall(require, 'copas')
-local copashttpAvailable, http = pcall(require, 'copas.http')
-local mimguiAvailable, imgui = pcall(require, 'mimgui')
-local mimguiaddonsAvailable, mimgui = pcall(require, 'mimgui_addons')
-local screenshotAvailable, screenshot = pcall(require, 'screenshot')
-local encodingAvailable, encoding = pcall(require, 'encoding')
-local memoryAvailable, memory = pcall(require, 'memory')
-local ffiAvailable, ffi = pcall(require, 'ffi')
-local windowsmessageAvailable, wm = pcall(require, 'windows.message')
-local fawesomeAvailable, fa = pcall(require, 'fAwesome5')
+local _, sampev = pcall(require, 'samp.events')
+local _, inicfg = pcall(require, 'inicfg')
+local _, vkeys = pcall(require, 'vkeys')
+local _, socket = pcall(require, 'luasocket.socket')
+local _, copas = pcall(require, 'copas')
+local _, http = pcall(require, 'copas.http')
+local _, imgui = pcall(require, 'mimgui')
+local _, mimgui = pcall(require, 'mimgui_addons')
+local _, screenshot = pcall(require, 'screenshot')
+local _, encoding = pcall(require, 'encoding')
+local _, memory = pcall(require, 'memory')
+local _, ffi = pcall(require, 'ffi')
+local _, wm = pcall(require, 'windows.message')
+local _, fa = pcall(require, 'fAwesome5')
 
 encoding.default = 'CP1251'
 local u8 = encoding.UTF8
@@ -2156,7 +2156,7 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
 end
 
 function scriptMessage(msg)
-    return sampAddChatMessage('{FFFFFF}[ {A802F8}ICA Helper {FFFFFF}]: '..msg, 0xCCCCCC)
+    return sampAddChatMessage('{063971}[ {A802F8}ICA Helper {063971}]: '..msg, 0xCCCCCC)
 end
 
 function sampev.onPlayerStreamOut(playerid)
