@@ -73,7 +73,7 @@ local carmenu_count = 0
 font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
 font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- подключение шрифта для остального текста
 
-local script_version = 61 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 62 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '2.3' -- версия для вывода в окне настроек, не изменять
 local nkeys_bind = {} -- хранит id клавиш при изменении макроса
@@ -1046,7 +1046,7 @@ function main()
         end
     end
 
-    local response, code, headers, status = httpRequest('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua')
+    local response, code, headers, status = httpRequest('https://drive.google.com/uc?id=1D2FiVISkXtRJ01OxQM6ht9Bk9ExzduW_')
     if response then
         new_version, text_new_version = response:match('local script_version = (%d+)'), response:match("local text_version = '(.-)'")
         if tonumber(new_version) > script_version then updateScript() update = true end
@@ -1284,7 +1284,7 @@ end
 
 function updateScript()
     if mainIni.config.autoupdate then
-        downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua', thisScript().path, function(id, status)
+        downloadUrlToFile('https://drive.google.com/uc?id=1D2FiVISkXtRJ01OxQM6ht9Bk9ExzduW_', thisScript().path, function(id, status)
             if status == dlstatus.STATUS_ENDDOWNLOADDATA then
                 scriptMessage('Обновление загружено. Новая версия: '..text_new_version)
                 scriptMessage('Скрипт перезапустится. Ожидайте, это не займет много времени')
