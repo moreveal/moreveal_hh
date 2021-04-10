@@ -2156,7 +2156,7 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
 end
 
 function scriptMessage(msg)
-    return sampAddChatMessage('{063971}[ {A802F8}ICA Helper {063971}]: '..msg, 0xCCCCCC)
+    return sampAddChatMessage('{FFFFFF}[ {A802F8}ICA Helper {FFFFFF}]: '..msg, 0xCCCCCC)
 end
 
 function sampev.onPlayerStreamOut(playerid)
