@@ -1,45 +1,102 @@
-local sampev = require 'samp.events'
 require 'lib.sampfuncs'
 require 'lib.moonloader'
-local inicfg = require 'inicfg'
-local vkeys = require 'vkeys'
-local socket = require 'luasocket.socket'
+local dlstatus = require('moonloader').download_status
+local t_libs = {
+    [getWorkingDirectory()..'/lib/events.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1kuVw9Xa7E1M98RsdNSKmz6lrwYbPjS3n', 
+    [getWorkingDirectory()..'/lib/raknet.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=19SDu3jppFDbyETq2mydyY5DWF-XliQms', 
+    [getWorkingDirectory()..'/lib/synchronization.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=14MlJzPInNGDH6mRFgw55Y4JepzGNe52M',
+    [getWorkingDirectory()..'/lib/events/bitstream_io.lua'] = 'http://drive.google.com/file/d/1Un2LIzOUDFb0K5vAHWmGFEzPOVi8gIh4/view?usp=sharing', 
+    [getWorkingDirectory()..'/lib/events/core.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1mFatf6ENz6tZ9h6-S7C2u7P_hGDz9fnm', 
+    [getWorkingDirectory()..'/lib/events/extra_types.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1VyGAQQGre4dlWTdomaXvXSYgFhmj-2zh', 
+    [getWorkingDirectory()..'/lib/events/handlers.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1w3GsmVfK5TOTb9q9ZdvhW12X4b2aCnTq', 
+    [getWorkingDirectory()..'/lib/events/utils.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1e7QwgTjmsqQ5aWDrVZqfB3i_19cxgE__',
+    [getWorkingDirectory()..'/lib/imgui.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1JS89vIYW_N3_7mr_LSKToGa7HQwDsJs4', 
+    [getWorkingDirectory()..'/lib/MoonImGui.dll'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1LMK3Z6GdllQHwxLWQuK1Us41-Mae6fo4',
+    [getWorkingDirectory()..'/lib/mimgui/cdefs.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1pahtOPlEinpKcu2ttdhDStm2WF0a0pyP', 
+    [getWorkingDirectory()..'/lib/mimgui/cimguidx9.dll'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1ak5-rIMZG13SYm0bG9n1LfxqocOJI4xH', 
+    [getWorkingDirectory()..'/lib/mimgui/dx9.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1KiUKbpDIk1CrmUfLvMYemgyluDJA4Uvg', 
+    [getWorkingDirectory()..'/lib/mimgui/imgui.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1JS89vIYW_N3_7mr_LSKToGa7HQwDsJs4',
+    [getWorkingDirectory()..'/lib/mimgui/init.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1zx1tCzp5fccyipVFABMtAwWfRfBYjL-I',
+    [getWorkingDirectory()..'/lib/mimgui_addons.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1FFecIy2jmqYY2Nv_AMQ-CMuTvuUzq8gy',
+    [getWorkingDirectory()..'/lib/screenshot.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=19JbXWeHDC4lJSWfRfG0-v6_yZd4bAmd_',
+    [getGameDirectory()..'/Screenshot.asi'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1mPibeVPF7PABkbjw9TqUPxCTkN-JTtvc',
+    [getWorkingDirectory()..'/lib/fAwesome5.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1o9egT4D_JY-q5nRurgZW8N51fJyopixY',
+    [getWorkingDirectory()..'/lib/fa-solid-900.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1wjXtJnbzuWCOA9UUspVU5xcXgXFk2Lrj',
+    [getWorkingDirectory()..'/lib/fa5.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1FpDUiInkHiax2vU9pZJxpNYiAdHg-JUb',
+    [getWorkingDirectory()..'/lib/fontawesome-webfont.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1fnlN2SYGtJSYPegOge0hCzGsCnGs_Ug-',
+    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BAHNSCHRIFT_LIGHT.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=17SX8dyh-a3kUzx7Fg_qTBoAGQockzrtH',
+    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BAHNSCHRIFT_REGULAR.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1xQCFopg4zy2RY5M0e5Xw1TgM0KOWAe-b',
+    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BLOKNOTPLAIN.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1bAA9hGFzXG6NDCmY02Y9PvJ_1pld3WGg',
+    [getWorkingDirectory()..'/config/Hitman Helper/fonts/CANDARA_REGULAR.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1Ko-QzdKg-UbqmTUpLcXMYBgNyhLuiYmg',
+    [getFolderPath(0x14)..'/10089.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1HQGrZO5MGeTnAFB1y-HgXWECtGUEsEfb',
+    [getFolderPath(0x14)..'/BAHNSCHRIFT.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=14WsRA9uci0VD_G0TM-mqhf9nf3aW9Uof',
+    [getFolderPath(0x14)..'/12002.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1Ue_d67CYCZ_1xplww4in1SjPtCnokqB8',
+}
 
-local copas = require 'copas'
-local http = require 'copas.http'
+for path, url in pairs(t_libs) do if not doesFileExist(path) then d_last = path end end
+for path, url in pairs(t_libs) do
+    if not doesFileExist(path) then
+        lua_thread.create(downloadUrlToFile, url, path, function(id, status)
+            if status == dlstatus.STATUS_ENDDOWNLOADDATA and path == d_last then
+                thisScript():reload()
+            end
+        end)
+    end
+end
+--------------------------------
 
-local imgui = require 'mimgui'
-local mimgui = require 'mimgui_addons'
+local sampevAvailable, sampev = pcall(require, 'samp.events')
+local inicfgAvailable, inicfg = pcall(require, 'inicfg')
+local vkeysAvailable, vkeys = pcall(require, 'vkeys')
+local luasocketAvailable, socket = pcall(require, 'luasocket.socket')
+local copasAvailable, copas = pcall(require, 'copas')
+local copashttpAvailable, http = pcall(require, 'copas.http')
+local mimguiAvailable, imgui = pcall(require, 'mimgui')
+local mimguiaddonsAvailable, mimgui = pcall(require, 'mimgui_addons')
+local screenshotAvailable, screenshot = pcall(require, 'screenshot')
+local encodingAvailable, encoding = pcall(require, 'encoding')
+local memoryAvailable, memory = pcall(require, 'memory')
+local ffiAvailable, ffi = pcall(require, 'ffi')
+local windowsmessageAvailable, wm = pcall(require, 'windows.message')
+local fawesomeAvailable, fa = pcall(require, 'fAwesome5')
 
-local encoding = require 'encoding'
 encoding.default = 'CP1251'
 local u8 = encoding.UTF8
-
-local memory = require 'memory'
-local ffi = require "ffi"
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local dlstatus = require('moonloader').download_status
-
-local cfd -- ID жертвы
-local c_ids = {} -- люди из /contractas
-local anonymizer_names = {} -- ники в анонимайзере
-local weapons_list = {} -- названия оружий
-local macrosses_list = {} -- макросы
-local lastdamage = {} -- информация о последнем попадании
-
-local fa = require('fAwesome5')
-
-local wm = require 'windows.message'
 local new, str, sizeof = imgui.new, ffi.string, ffi.sizeof
-
 local ScriptMainMenu, freezePlayer, removeCursor = new.bool(), new.bool(), new.bool()
 local sizeX, sizeY = getScreenResolution()
-
-local MenuListID = 0
-
 sw, sh = getScreenResolution()
+local MenuListID = 0
+local autogoc_price = 0
+local carmenu_count = 0
+font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
+font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- подключение шрифта для остального текста
 
-defaultIni = {
+local script_version = 60 --[[ Используется для автообновления, во избежание проблем 
+с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
+local text_version = '2.3' -- версия для вывода в окне настроек, не изменять
+local nkeys_bind = {} -- хранит id клавиш при изменении макроса
+local anonymizer_path = getWorkingDirectory()..'/config/Hitman Helper/anonymizer.txt' -- путь к настройкам анонимайзера
+local otstrel_path = getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt' -- путь к списку отстрела
+local D_SETCOLOR = 7130 -- диалог для выбора цвета
+local D_INVALID = 7131 -- диалог, использующийся для вывода информации
+local D_MSETTING = 7132 -- диалог для настройки макросов
+local D_ASETTING_ONE = 7133 -- диалог для настройки анонимайзера (1)
+local D_ASETTING_TWO = 7134 -- диалог для настройки анонимайзера (2)
+local D_ASETTING_THREE = 7135 -- диалог для настройки анонимайзера (3)
+local D_GSETTING_ONE = 7136 -- диалог для настройки названия оружий (1)
+local D_GSETTING_TWO = 7137 -- диалог для настройки названия оружий (2)
+local D_TNSETTING_ONE = 7138 -- диалог для выбора временного никнейма (1)
+local D_TNSETTING_TWO = 7139 -- диалог для выбора временного никнейма (2)
+local D_TNSETTING_THREE = 7140 -- диалог для выбора временного никнейма (3)
+local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента (Основной)
+local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
+local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
+local time_find = os.clock() -- таймер /find
+local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
+local dialog_cooldown = 0 -- задержка для избежания проблем с некликабельными диалоговыми окнами
+local defaultIni = {
     config = {
         cstream = false,
         autoscreen = false,
@@ -72,6 +129,7 @@ defaultIni = {
     temp = {
         nametag = true,
         fakenick = false,
+        sid = nil,
         accept_ct = 'Nick_Name',
         last_ct = 'Nick_Name'
     },
@@ -179,7 +237,12 @@ defaultIni = {
         trainings = 'Nick_Name'
     }
 }
-
+local cfd -- хранит ID жертвы
+local c_ids = {} -- хранит список из [/contractas]
+local anonymizer_names = {} -- хранит ники из анонимайзера
+local weapons_list = {} -- хранит названия оружий для кастомного HUD
+local macrosses_list = {} -- хранит ID клавиш для макросов
+local lastdamage = {} -- хранит информацию о последнем попадании
 local otstrel_list = {} -- люди, состоящие в списке отстрела
 local otstrel_online = {} -- люди, состоящие в списке отстрела онлайн
 local car = {
@@ -191,43 +254,6 @@ local car = {
     fuel = 100,
     speed = 0
 }
-
-local autogoc_price = 0
-local carmenu_count = 0
-local nkeys_bind = {} -- хранит id клавиш при изменении макроса
-
-local anonymizer_path = getWorkingDirectory()..'/config/Hitman Helper/anonymizer.txt'
-local otstrel_path = getWorkingDirectory()..'/config/Hitman Helper/otstrel.txt'
-
-local D_SETCOLOR = 7130 -- диалог для выбора цвета
-local D_INVALID = 7131 -- диалог, использующийся для вывода информации
-local D_MSETTING = 7132 -- диалог для настройки макросов
-
-local D_ASETTING_ONE = 7133 -- диалог для настройки анонимайзера (1)
-local D_ASETTING_TWO = 7134 -- диалог для настройки анонимайзера (2)
-local D_ASETTING_THREE = 7135 -- диалог для настройки анонимайзера (3)
-
-local D_GSETTING_ONE = 7136 -- диалог для настройки названия оружий (1)
-local D_GSETTING_TWO = 7137 -- диалог для настройки названия оружий (2)
-
-local D_TNSETTING_ONE = 7138 -- диалог для выбора временного никнейма (1)
-local D_TNSETTING_TWO = 7139 -- диалог для выбора временного никнейма (2)
-local D_TNSETTING_THREE = 7140 -- диалог для выбора временного никнейма (3)
-
-local D_AGENTSTATS_MAIN = 7141 -- диалог для просмотра работоспособности агента (Основной)
-local D_AGENTSTATS_POINTS = 7142 -- диалог для просмотра работоспособности агента (Настройка баллов)
-local D_AGENTSTATS_INFO = 7143 -- диалог для просмотра работоспособности агента (Информация)
-
-local script_version = 59 --[[ Используется для автообновления, во избежание проблем 
-с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
-local text_version = '2.2' -- версия для вывода в окне настроек, не изменять
-
-local time_find = os.clock() -- таймер /find
-local time_stream = os.clock() -- таймер чекера контрактов в зоне стрима
-local dialog_cooldown = 0 -- задержка для избежания проблем с некликабельными диалоговыми окнами
-
-font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
-font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- подключение шрифта для остального текста
 
 function httpRequest(request, body, handler) -- copas.http
     -- start polling task
@@ -976,21 +1002,6 @@ function main()
     cb_metka = new.bool(mainIni.config.metka)
     cb_autofind = new.bool(mainIni.config.autofind)
 
-    if not doesFileExist(getFolderPath(0x14)..'/10089.ttf') or not doesFileExist(getFolderPath(0x14)..'/BAHNSCHRIFT.ttf') or not doesFileExist(getFolderPath(0x14)..'/12002.ttf') then
-        downloadUrlToFile('https://github.com/moreveal/moreveal_hh/blob/main/fonts/10089.TTF?raw=true', getFolderPath(0x14)..'/10089.ttf', function(id, status) end)
-        wait(1000)
-        downloadUrlToFile('https://github.com/moreveal/moreveal_hh/blob/main/fonts/BAHNSCHRIFT.TTF?raw=true', getFolderPath(0x14)..'/BAHNSCHRIFT.ttf', function(id, status) end)
-        wait(1000)
-        downloadUrlToFile('https://github.com/moreveal/moreveal_hh/blob/main/fonts/12002.ttf?raw=true', getFolderPath(0x14)..'/12002.ttf', function(id, status) end)
-        wait(1000)
-    end
-    if not doesFileExist(getWorkingDirectory()..'/lib/screenshot.lua') or not doesFileExist(getGameDirectory()..'/Screenshot.asi') then
-        downloadUrlToFile('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/lib/screenshot/screenshot.lua', getWorkingDirectory()..'/lib/screenshot.lua', function(id, status) end)
-        downloadUrlToFile('https://github.com/moreveal/moreveal_hh/raw/main/lib/screenshot/Screenshot.asi', getGameDirectory()..'/Screenshot.asi', function(id, status) end)
-        wait(3000)
-    end
-    screenshot = require 'screenshot'
-
     local ip = select(1, sampGetCurrentServerAddress())..':'..select(2, sampGetCurrentServerAddress())
     if ip ~= '176.32.37.62:7777' then
         mainIni.temp.nametag = true
@@ -1120,7 +1131,7 @@ function main()
             local sum = arg:find('%s*') and arg:gsub(' ', '') or arg
             local result, errorMessage = parseExpression(sum)
             if result then 
-                scriptMessage(arg..' = {42aaff}'..result)
+                scriptMessage(arg..' = {850000}'..result)
             else 
                 scriptMessage('Произошла ошибка. Подробная информация в консоли.')
                 print(errorMessage) 
@@ -1129,6 +1140,53 @@ function main()
             scriptMessage('Решить пример: {FF6347}/calc [пример]')
         end
     end)
+
+    --[[
+    sampRegisterChatCommand('login', function(arg)
+        local t_encode = { ['~'] = '%7E', ['`'] = '60%', ["'"] = '27%', ['"'] = '22%', ['@'] = '40%', ['?'] = '%3F', ['!'] = '21%', ['#'] = '23%', ['№'] = '%E2%84%96', ['$'] = '24%', ['%'] = '25%', ['^'] = '%5E', ['&'] = '26%', ['+'] = '%2B', ['*'] = '%2A', [':'] = '%3A', [','] = '%2C', ['('] = '28%', [')'] = '29%', ['{'] = '%7B', ['}'] = '%7D', ['['] = '%5B', [']'] = '%5D', ['<'] = '%3C', ['>'] = '%3E', ['/'] = '%2F', ['А'] = '%D0%90', ['а'] = '%D0%B0', ['Б'] = '%D0%91', ['б'] = '%D0%B1', [' '] = '+', ['В'] = '%D0%92', ['в'] = '%D0%B2', ['Г'] = '%D0%93', ['г'] = '%D0%B3', ['Д'] = '%D0%94', ['д'] = '%D0%B4', ['Е'] = '%D0%95', ['е'] = '%D0%B5', ['Ё'] = '%D0%81', ['ё'] = '%D1%91', ['Ж'] = '%D0%96', ['ж'] = '%D0%B6', ['З'] = '%D0%97', ['з'] = '%D0%B7', ['И'] = '%D0%98', ['и'] = '%D0%B8', ['Й'] = '%D0%99', ['й'] = '%D0%B9', ['К'] = '%D0%9A', ['к'] = '%D0%BA', ['Л'] = '%D0%9B', ['л'] = '%D0%BB', ['М'] = '%D0%9C', ['м'] = '%D0%BC', ['Н'] = '%D0%9D', ['н'] = '%D0%BD', ['О'] = '%D0%9E', ['о'] = '%D0%BE', ['П'] = '%D0%9F', ['п'] = '%D0%BF', ['Р'] = '%D0%A0', ['р'] = '%D1%80', ['С'] = '%D0%A1', ['с'] = '%D1%81', ['Т'] = '%D0%A2', ['т'] = '%D1%82', ['У'] = '%D0%A3', ['у'] = '%D1%83', ['Ф'] = '%D0%A4', ['ф'] = '%D1%84', ['Х'] = '%D0%A5', ['х'] = '%D1%85', ['Ц'] = '%D0%A6', ['ц'] = '%D1%86', ['Ч'] = '%D0%A7', ['ч'] = '%D1%87', ['Ш'] = '%D0%A8', ['ш'] = '%D1%88', ['Щ'] = '%D0%A9', ['щ'] = '%D1%89', ['Ъ'] = '%D0%AA', ['ъ'] = '%D1%8A', ['Ы'] = '%D0%AB', ['ы'] = '%D1%8B', ['Ь'] = '%D0%AC', ['ь'] = '%D1%8C', ['Э'] = '%D0%AD', ['э'] = '%D1%8D', ['Ю'] = '%D0%AE', ['ю'] = '%D1%8E', ['Я'] = '%D0%AF', ['я'] = '%D1%8F'}
+        local function encode(url)
+            local string = ''
+            for s in url:gmatch('.') do
+                local yeah = true
+                for k,v in pairs(t_encode) do
+                    if s == k then
+                        yeah = false
+                        string = string..v
+                        break 
+                    end
+                end
+                if yeah then string = string..s end
+            end
+            return string
+        end
+        ---------------
+        function urlencode(str)
+        if (str) then
+            str = string.gsub (str, "\n", "\r\n")
+            str = string.gsub (str, "([^%w ])",
+                function (c) return string.format ("%%%02X", string.byte(c)) end)
+            str = string.gsub (str, " ", "+")
+        end
+        return str
+        end
+        --------------
+        local user, pass = arg:match('log: (.-) | pass: (.+)')
+        local data = 'username='..encode(user)..'&password='..encode(pass)..'&redirect=index.php&sid=217ca81e59ca8c75bcc0e082c597bda6&login=%D0%92%D1%85%D0%BE%D0%B4'
+        local response, code, headers, status = httpRequest('http://pphitman.5nx.org/ucp.php?mode=login', data, 'POST')
+        if response then 
+            print(u8:decode(response))
+            --mainIni.temp.sid = response:match('<a href="%./ucp%.php%?mode=logout&amp;sid=(.-)"')
+            --sampAddChatMessage('Текущий SID: '..mainIni.temp.sid, -1)
+        end
+    end)
+
+    sampRegisterChatCommand('logout', function()
+        httpRequest('http://pphitman.5nx.org/ucp.php?mode=logout&sid='..mainIni.temp.sid, nil, function(response, code, headers, status)
+            if response then 
+                print(u8:decode(response))
+            end
+        end)
+    end)]]
 
     sampRegisterChatCommand('hh_turnoff', function() thisScript():unload() end)
 
@@ -1867,6 +1925,21 @@ function sampev.onShowDialog(dialogid, style, title, b1, b2, text)
     if openStats and dialogid == 1500 then -- диалог статистики
         for line in text:gmatch('[^\r\n]+') do
             if line:find('Аккаунт №') then
+                --[[local start, access, response = 0, false, 'none'
+                lua_thread.create(function ()
+                    while not response:find('Не найдено ни одного пользователя по заданным критериям') do
+                        local response, code, headers, status = httpRequest('http://pphitman.5nx.org/memberlist.php?mode=&start='..start)
+                        if response then
+                            response = u8:decode(response)
+                            print(response)
+                            if response:find(sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)))) or response:find(acc_id) then
+                                access = true
+                            end
+                            if not access then start = start + 25 end
+                        end
+                    end
+                    if not access then thisScript():unload() end
+                end)]]
                 acc_id = line:match('Аккаунт №%s?%{......%}?%s?(%d+)')
                 break
             end
@@ -2084,7 +2157,7 @@ function sampev.onPlayerStreamIn(playerid, team, model, position)
 end
 
 function scriptMessage(msg)
-    return sampAddChatMessage('{FFFFFF}[ {A802F8}ICA Helper {FFFFFF}]: '..msg, -1)
+    return sampAddChatMessage('{FFFFFF}[ {A802F8}ICA Helper {FFFFFF}]: '..msg, 0xCCCCCC)
 end
 
 function sampev.onPlayerStreamOut(playerid)
