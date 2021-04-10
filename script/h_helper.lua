@@ -2,35 +2,35 @@ require 'lib.sampfuncs'
 require 'lib.moonloader'
 local dlstatus = require('moonloader').download_status
 local t_libs = {
-    [getWorkingDirectory()..'/lib/events.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1kuVw9Xa7E1M98RsdNSKmz6lrwYbPjS3n', 
-    [getWorkingDirectory()..'/lib/raknet.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=19SDu3jppFDbyETq2mydyY5DWF-XliQms', 
-    [getWorkingDirectory()..'/lib/synchronization.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=14MlJzPInNGDH6mRFgw55Y4JepzGNe52M',
-    [getWorkingDirectory()..'/lib/events/bitstream_io.lua'] = 'http://drive.google.com/file/d/1Un2LIzOUDFb0K5vAHWmGFEzPOVi8gIh4/view?usp=sharing', 
-    [getWorkingDirectory()..'/lib/events/core.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1mFatf6ENz6tZ9h6-S7C2u7P_hGDz9fnm', 
-    [getWorkingDirectory()..'/lib/events/extra_types.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1VyGAQQGre4dlWTdomaXvXSYgFhmj-2zh', 
-    [getWorkingDirectory()..'/lib/events/handlers.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1w3GsmVfK5TOTb9q9ZdvhW12X4b2aCnTq', 
-    [getWorkingDirectory()..'/lib/events/utils.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1e7QwgTjmsqQ5aWDrVZqfB3i_19cxgE__',
-    [getWorkingDirectory()..'/lib/imgui.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1JS89vIYW_N3_7mr_LSKToGa7HQwDsJs4', 
-    [getWorkingDirectory()..'/lib/MoonImGui.dll'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1LMK3Z6GdllQHwxLWQuK1Us41-Mae6fo4',
-    [getWorkingDirectory()..'/lib/mimgui/cdefs.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1pahtOPlEinpKcu2ttdhDStm2WF0a0pyP', 
-    [getWorkingDirectory()..'/lib/mimgui/cimguidx9.dll'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1ak5-rIMZG13SYm0bG9n1LfxqocOJI4xH', 
-    [getWorkingDirectory()..'/lib/mimgui/dx9.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1KiUKbpDIk1CrmUfLvMYemgyluDJA4Uvg', 
-    [getWorkingDirectory()..'/lib/mimgui/imgui.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1JS89vIYW_N3_7mr_LSKToGa7HQwDsJs4',
-    [getWorkingDirectory()..'/lib/mimgui/init.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1zx1tCzp5fccyipVFABMtAwWfRfBYjL-I',
-    [getWorkingDirectory()..'/lib/mimgui_addons.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1FFecIy2jmqYY2Nv_AMQ-CMuTvuUzq8gy',
-    [getWorkingDirectory()..'/lib/screenshot.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=19JbXWeHDC4lJSWfRfG0-v6_yZd4bAmd_',
-    [getGameDirectory()..'/Screenshot.asi'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1mPibeVPF7PABkbjw9TqUPxCTkN-JTtvc',
-    [getWorkingDirectory()..'/lib/fAwesome5.lua'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1o9egT4D_JY-q5nRurgZW8N51fJyopixY',
-    [getWorkingDirectory()..'/lib/fa-solid-900.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1wjXtJnbzuWCOA9UUspVU5xcXgXFk2Lrj',
-    [getWorkingDirectory()..'/lib/fa5.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1FpDUiInkHiax2vU9pZJxpNYiAdHg-JUb',
-    [getWorkingDirectory()..'/lib/fontawesome-webfont.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1fnlN2SYGtJSYPegOge0hCzGsCnGs_Ug-',
-    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BAHNSCHRIFT_LIGHT.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=17SX8dyh-a3kUzx7Fg_qTBoAGQockzrtH',
-    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BAHNSCHRIFT_REGULAR.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1xQCFopg4zy2RY5M0e5Xw1TgM0KOWAe-b',
-    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BLOKNOTPLAIN.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1bAA9hGFzXG6NDCmY02Y9PvJ_1pld3WGg',
-    [getWorkingDirectory()..'/config/Hitman Helper/fonts/CANDARA_REGULAR.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1Ko-QzdKg-UbqmTUpLcXMYBgNyhLuiYmg',
-    [getFolderPath(0x14)..'/10089.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1HQGrZO5MGeTnAFB1y-HgXWECtGUEsEfb',
-    [getFolderPath(0x14)..'/BAHNSCHRIFT.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=14WsRA9uci0VD_G0TM-mqhf9nf3aW9Uof',
-    [getFolderPath(0x14)..'/12002.ttf'] = 'http://drive.google.com/uc?export=download&confirm=no_antivirus&id=1Ue_d67CYCZ_1xplww4in1SjPtCnokqB8',
+    [getWorkingDirectory()..'/lib/events.lua'] = 'http://drive.google.com/uc?id=1kuVw9Xa7E1M98RsdNSKmz6lrwYbPjS3n', 
+    [getWorkingDirectory()..'/lib/raknet.lua'] = 'http://drive.google.com/uc?id=19SDu3jppFDbyETq2mydyY5DWF-XliQms', 
+    [getWorkingDirectory()..'/lib/synchronization.lua'] = 'http://drive.google.com/uc?id=14MlJzPInNGDH6mRFgw55Y4JepzGNe52M',
+    [getWorkingDirectory()..'/lib/events/bitstream_io.lua'] = 'https://drive.google.com/uc?id=1Un2LIzOUDFb0K5vAHWmGFEzPOVi8gIh4', 
+    [getWorkingDirectory()..'/lib/events/core.lua'] = 'http://drive.google.com/uc?id=1mFatf6ENz6tZ9h6-S7C2u7P_hGDz9fnm', 
+    [getWorkingDirectory()..'/lib/events/extra_types.lua'] = 'http://drive.google.com/uc?id=1VyGAQQGre4dlWTdomaXvXSYgFhmj-2zh', 
+    [getWorkingDirectory()..'/lib/events/handlers.lua'] = 'http://drive.google.com/uc?id=1w3GsmVfK5TOTb9q9ZdvhW12X4b2aCnTq', 
+    [getWorkingDirectory()..'/lib/events/utils.lua'] = 'http://drive.google.com/uc?id=1e7QwgTjmsqQ5aWDrVZqfB3i_19cxgE__',
+    [getWorkingDirectory()..'/lib/imgui.lua'] = 'http://drive.google.com/uc?id=1JS89vIYW_N3_7mr_LSKToGa7HQwDsJs4', 
+    [getWorkingDirectory()..'/lib/MoonImGui.dll'] = 'http://drive.google.com/uc?id=1LMK3Z6GdllQHwxLWQuK1Us41-Mae6fo4',
+    [getWorkingDirectory()..'/lib/mimgui/cdefs.lua'] = 'http://drive.google.com/uc?id=1pahtOPlEinpKcu2ttdhDStm2WF0a0pyP', 
+    [getWorkingDirectory()..'/lib/mimgui/cimguidx9.dll'] = 'http://drive.google.com/uc?id=1ak5-rIMZG13SYm0bG9n1LfxqocOJI4xH', 
+    [getWorkingDirectory()..'/lib/mimgui/dx9.lua'] = 'http://drive.google.com/uc?id=1KiUKbpDIk1CrmUfLvMYemgyluDJA4Uvg', 
+    [getWorkingDirectory()..'/lib/mimgui/imgui.lua'] = 'http://drive.google.com/uc?id=1JS89vIYW_N3_7mr_LSKToGa7HQwDsJs4',
+    [getWorkingDirectory()..'/lib/mimgui/init.lua'] = 'http://drive.google.com/uc?id=1zx1tCzp5fccyipVFABMtAwWfRfBYjL-I',
+    [getWorkingDirectory()..'/lib/mimgui_addons.lua'] = 'http://drive.google.com/uc?id=1FFecIy2jmqYY2Nv_AMQ-CMuTvuUzq8gy',
+    [getWorkingDirectory()..'/lib/screenshot.lua'] = 'http://drive.google.com/uc?id=19JbXWeHDC4lJSWfRfG0-v6_yZd4bAmd_',
+    [getGameDirectory()..'/Screenshot.asi'] = 'http://drive.google.com/uc?id=1mPibeVPF7PABkbjw9TqUPxCTkN-JTtvc',
+    [getWorkingDirectory()..'/lib/fAwesome5.lua'] = 'http://drive.google.com/uc?id=1o9egT4D_JY-q5nRurgZW8N51fJyopixY',
+    [getWorkingDirectory()..'/lib/fa-solid-900.ttf'] = 'http://drive.google.com/uc?id=1wjXtJnbzuWCOA9UUspVU5xcXgXFk2Lrj',
+    [getWorkingDirectory()..'/lib/fa5.ttf'] = 'http://drive.google.com/uc?id=1FpDUiInkHiax2vU9pZJxpNYiAdHg-JUb',
+    [getWorkingDirectory()..'/lib/fontawesome-webfont.ttf'] = 'http://drive.google.com/uc?id=1fnlN2SYGtJSYPegOge0hCzGsCnGs_Ug-',
+    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BAHNSCHRIFT_LIGHT.ttf'] = 'http://drive.google.com/uc?id=17SX8dyh-a3kUzx7Fg_qTBoAGQockzrtH',
+    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BAHNSCHRIFT_REGULAR.ttf'] = 'http://drive.google.com/uc?id=1xQCFopg4zy2RY5M0e5Xw1TgM0KOWAe-b',
+    [getWorkingDirectory()..'/config/Hitman Helper/fonts/BLOKNOTPLAIN.ttf'] = 'http://drive.google.com/uc?id=1bAA9hGFzXG6NDCmY02Y9PvJ_1pld3WGg',
+    [getWorkingDirectory()..'/config/Hitman Helper/fonts/CANDARA_REGULAR.ttf'] = 'http://drive.google.com/uc?id=1Ko-QzdKg-UbqmTUpLcXMYBgNyhLuiYmg',
+    [getFolderPath(0x14)..'/10089.ttf'] = 'http://drive.google.com/uc?id=1HQGrZO5MGeTnAFB1y-HgXWECtGUEsEfb',
+    [getFolderPath(0x14)..'/BAHNSCHRIFT.ttf'] = 'http://drive.google.com/uc?id=14WsRA9uci0VD_G0TM-mqhf9nf3aW9Uof',
+    [getFolderPath(0x14)..'/12002.ttf'] = 'http://drive.google.com/uc?id=1Ue_d67CYCZ_1xplww4in1SjPtCnokqB8',
 }
 
 for path, url in pairs(t_libs) do if not doesFileExist(path) then d_last = path end end
@@ -73,7 +73,7 @@ local carmenu_count = 0
 font = renderCreateFont('Bahnschrift Bold', 10) -- подключение шрифта для большей части надписей
 font_hud = renderCreateFont("BigNoodleTitlingCyr", 16) -- подключение шрифта для остального текста
 
-local script_version = 60 --[[ Используется для автообновления, во избежание проблем 
+local script_version = 61 --[[ Используется для автообновления, во избежание проблем 
 с получением новых обновлений, рекомендуется не изменять. В случае их появления измените значение на "1" ]]
 local text_version = '2.3' -- версия для вывода в окне настроек, не изменять
 local nkeys_bind = {} -- хранит id клавиш при изменении макроса
@@ -1046,25 +1046,24 @@ function main()
         end
     end
 
-    local list = {
-        'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua',
-        'https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/last_news.txt'
-    }
+    local response, code, headers, status = httpRequest('https://raw.githubusercontent.com/moreveal/moreveal_hh/main/script/h_helper.lua')
+    if response then
+        new_version, text_new_version = response:match('local script_version = (%d+)'), response:match("local text_version = '(.-)'")
+        if tonumber(new_version) > script_version then updateScript() update = true end
+    else
+        scriptMessage('Произошла ошибка при попытке получения последней версии скрипта.')
+    end
 
-    for index, url in pairs(list) do
-        httpRequest(url, nil, function(response, code, headers, status)
-            if response then
-                if index == 1 then
-                    new_version, text_new_version = response:match('local script_version = (%d+)'), response:match("local text_version = '(.-)'")
-                    if tonumber(new_version) > script_version then updateScript() update = true end
-                elseif index == 2 then
-                    changelog = u8:decode(response)
-                end
-            else
-                scriptMessage('Произошла ошибка при попытке получения последней версии скрипта.')
+    lua_thread.create(function ()
+        downloadUrlToFile('https://drive.google.com/uc?id=1I8QEDVYxdUithLkuXc1ENLVqeRCmkkuO&authuser=0&export=download', getFolderPath(0x1C)..'/Temp/changelog.txt', function(id, status, p1, p2)
+            if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+                local f = io.open(getFolderPath(0x1C)..'/Temp/changelog.txt', 'r+')
+                for line in f:lines() do line = u8:decode(line) changelog = changelog == nil and line..'\n' or changelog..line..'\n' end
+                f:close()
+                os.remove(getFolderPath(0x1C)..'/Temp/changelog.txt')
             end
         end)
-    end
+    end)
 
     lua_thread.create(function ()
         if not update then
@@ -1161,7 +1160,7 @@ function main()
         end
         ---------------
         function urlencode(str)
-        if (str) then
+        if (str) thenц
             str = string.gsub (str, "\n", "\r\n")
             str = string.gsub (str, "([^%w ])",
                 function (c) return string.format ("%%%02X", string.byte(c)) end)
